@@ -1,0 +1,21 @@
+syntax = "proto2";
+
+message FileInfo {
+    required string file_name = 1;
+    required string download_url = 2;
+}
+
+message UserMessage {
+    required int64 user_id = 1;
+    optional string text = 2;
+    optional FileInfo document = 3; 
+}
+
+message ServerResponse {
+    required int64 user_id = 1;
+    required string text = 2;
+}
+
+service UserMessageHandler {
+    rpc HandleMessage (UserMessage) returns (stream ServerResponse);
+}
