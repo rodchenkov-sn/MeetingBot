@@ -14,6 +14,8 @@ message UserMessage {
 message ServerResponse {
     required int64 user_id = 1;
     required string text = 2;
+    optional int64 event_id = 3;  // expected for scheduled messages
+    optional int64 timestamp = 4; // in secs
 }
 
 service UserMessageHandler {

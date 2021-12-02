@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto2',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x12user_message.proto\"3\n\x08\x46ileInfo\x12\x11\n\tfile_name\x18\x01 \x02(\t\x12\x14\n\x0c\x64ownload_url\x18\x02 \x02(\t\"I\n\x0bUserMessage\x12\x0f\n\x07user_id\x18\x01 \x02(\x03\x12\x0c\n\x04text\x18\x02 \x01(\t\x12\x1b\n\x08\x64ocument\x18\x03 \x01(\x0b\x32\t.FileInfo\"/\n\x0eServerResponse\x12\x0f\n\x07user_id\x18\x01 \x02(\x03\x12\x0c\n\x04text\x18\x02 \x02(\t2F\n\x12UserMessageHandler\x12\x30\n\rHandleMessage\x12\x0c.UserMessage\x1a\x0f.ServerResponse0\x01'
+  serialized_pb=b'\n\x12user_message.proto\"3\n\x08\x46ileInfo\x12\x11\n\tfile_name\x18\x01 \x02(\t\x12\x14\n\x0c\x64ownload_url\x18\x02 \x02(\t\"I\n\x0bUserMessage\x12\x0f\n\x07user_id\x18\x01 \x02(\x03\x12\x0c\n\x04text\x18\x02 \x01(\t\x12\x1b\n\x08\x64ocument\x18\x03 \x01(\x0b\x32\t.FileInfo\"T\n\x0eServerResponse\x12\x0f\n\x07user_id\x18\x01 \x02(\x03\x12\x0c\n\x04text\x18\x02 \x02(\t\x12\x10\n\x08\x65vent_id\x18\x03 \x01(\x03\x12\x11\n\ttimestamp\x18\x04 \x01(\x03\x32\x46\n\x12UserMessageHandler\x12\x30\n\rHandleMessage\x12\x0c.UserMessage\x1a\x0f.ServerResponse0\x01'
 )
 
 
@@ -132,6 +132,20 @@ _SERVERRESPONSE = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='event_id', full_name='ServerResponse.event_id', index=2,
+      number=3, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
+    _descriptor.FieldDescriptor(
+      name='timestamp', full_name='ServerResponse.timestamp', index=3,
+      number=4, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
@@ -145,7 +159,7 @@ _SERVERRESPONSE = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=150,
-  serialized_end=197,
+  serialized_end=234,
 )
 
 _USERMESSAGE.fields_by_name['document'].message_type = _FILEINFO
@@ -184,8 +198,8 @@ _USERMESSAGEHANDLER = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=199,
-  serialized_end=269,
+  serialized_start=236,
+  serialized_end=306,
   methods=[
   _descriptor.MethodDescriptor(
     name='HandleMessage',
