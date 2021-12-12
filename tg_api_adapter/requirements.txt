@@ -2,3 +2,4 @@ pyTelegramBotAPI
 grpcio
 protobuf
 apscheduler
+redis
