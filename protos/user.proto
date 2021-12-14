@@ -1,0 +1,12 @@
+service User {
+  rpc AddUser(UserId) returns (UserSuccess) {}
+  rpc DeleteUser(UserId) returns (UserSuccess) {}
+}
+
+message UserId {
+  required int32 id = 1;
+}
+
+message UserSuccess {
+  required int32 code = 1;
+}

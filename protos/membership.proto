@@ -1,0 +1,18 @@
+service MembershipService {
+  rpc AddMembership(MembershipId) returns (MembershipSuccess) {}
+  rpc DeleteMembership(MembershipId) returns (MembershipSuccess) {}
+}
+
+message Membership {
+  optional  int32 user_id = 1;
+  optional  int32 team_id = 2;
+  optional  bool role = 3;
+}
+
+message MembershipId {
+  required int32 id = 1;
+}
+
+message MembershipSuccess {
+  required int32 code = 1;
+}
