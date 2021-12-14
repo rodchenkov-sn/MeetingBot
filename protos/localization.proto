@@ -1,0 +1,11 @@
+service Localization {
+  rpc GetLocalization(LocalizationToken) returns (LocalizedString) {}
+}
+
+message LocalizationToken {
+  required string token = 1;
+}
+
+message LocalizedString {
+  required string localized_string = 1;
+}

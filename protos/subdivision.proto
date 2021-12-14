@@ -1,0 +1,25 @@
+service SubdivisionService {
+  rpc AddSubdivision(Subdivision) returns (SubdivisionSuccess) {}
+  rpc DeleteSubdivision(SubdivisionId) returns (SubdivisionSuccess) {}
+  rpc UpdateSubdivision(SubdivisionUpdate) returns (SubdivisionSuccess) {}
+}
+
+message SubdivisionUpdate {
+   required int32 id = 1;
+  optional  int32 master_id = 2;
+  optional  int32 slave_id = 3;
+}
+
+
+message Subdivision{
+  required  int32 master_id = 1;
+  required  int32 slave_id = 2;
+}
+
+message SubdivisionId {
+  required int32 id = 1;
+}
+
+message SubdivisionSuccess {
+  required int32 code = 1;
+}

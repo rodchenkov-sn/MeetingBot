@@ -1,0 +1,25 @@
+service MeetingService {
+  rpc AddMeeting(Meeting) returns (MeetingSuccess) {}
+  rpc DeleteMeeting(MeetingId) returns (MeetingSuccess) {}
+  rpc UpdateMeeting(MeetingUpdate) returns (MeetingSuccess) {}
+}
+
+message MeetingUpdate {
+   required int32 id = 1;
+  optional  string description = 2;
+  optional  string date = 3;
+}
+
+
+message Meeting{
+  required  string description = 2;
+  required  string date = 3;
+}
+
+message MeetingId {
+  required int32 id = 1;
+}
+
+message MeetingSuccess {
+  required int32 code = 1;
+}

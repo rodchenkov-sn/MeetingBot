@@ -1,0 +1,27 @@
+service InvitationService {
+  rpc AddInvitation(Invitation) returns (InvitationSuccess) {}
+  rpc DeleteInvitation(InvitationId) returns (InvitationSuccess) {}
+  rpc UpdateInvitation(InvitationUpdate) returns (InvitationSuccess) {}
+}
+
+message InvitationUpdate {
+  required  int32  id = 1;
+   optional int32 user_id = 2;
+  optional  int32 meeting_id = 3;
+  optional  string reaction = 4;
+}
+
+
+message Invitation{
+    required int32 user_id = 1;
+  required  int32 meeting_id = 2;
+  required  string reaction = 3;
+}
+
+message InvitationId {
+  required int32 id = 1;
+}
+
+message InvitationSuccess {
+  required int32 code = 1;
+}
