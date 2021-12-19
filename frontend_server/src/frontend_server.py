@@ -1,5 +1,4 @@
 from concurrent import futures
-from dataclasses import dataclass
 
 import grpc
 
@@ -15,11 +14,19 @@ stub = bsg.BackendServiceStub(channel)
 states = dict()
 
 
-@dataclass
 class State:
-    command: str
-    action: str
-    value: int = None
+    def __init__(self, command: str, action: str, value: int = None):
+        self.command = command
+        self.action = action
+        self.value = value
+
+    def to_str(self):
+        value = ''
+        if self.value is not None:
+            value = f'__{self.value}'
+        return f'{self.command}__{self.action}{value}'
+
+    # def from_str(self, string: str):  # todo
 
 
 class UserMessageHandler(umg.UserMessageHandlerServicer):
@@ -30,48 +37,47 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
         print(f'text: {text}')
 
         if text == '/create_team':
-            set_state(user_id, 'create_team:enter_name')
-            yield um.ServerResponse(
-                user_id=user_id,
-                text='Enter name'
-            )
-        elif user_id in states and states[user_id] == 'create_team:enter_name':
-            create_team_message = bs.CreateTeamMsg(name=text, owner=user_id)
-            entity_id = stub.CreateTeam(create_team_message)
-            named_info = stub.GetTeamInfo(entity_id)
-            team_name = named_info.name
-            remove_state(user_id)
-            yield um.ServerResponse(
-                user_id=user_id,
-                text=f'Team {team_name} created'
-            )
+            set_state(user_id, State(command='create_team', action='enter_name'))
+            yield um.ServerResponse(user_id=user_id, text='Enter team name')
+
+        elif text == '/add_member':
+            entity_id = bs.EntityId(id=user_id)
+            named_infos = stub.GetOwnedTeams(entity_id)
+
+            num_of_teams = 0
+            for named_info in named_infos:
+                yield um.ServerResponse(
+                    user_id=user_id,
+                    text=f'/add_member__{named_info.id} - add to \'{named_info.name}\' team')
+                num_of_teams += 1
+            set_state(user_id, State(command='add_member', action='choose_team'))
+
+            if num_of_teams == 0:
+                yield um.ServerResponse(user_id=user_id, text='You do not own any team')
+
+        elif user_id in states:
+            state = states[user_id]
+            if state.command == 'create_team' and state.action == 'enter_name':
+                create_team_message = bs.CreateTeamMsg(name=text, owner=user_id)
+                entity_id = stub.CreateTeam(create_team_message)
+                named_info = stub.GetTeamInfo(entity_id)
+                team_name = named_info.name
+                remove_state(user_id)
+                yield um.ServerResponse(user_id=user_id, text=f'Team \'{team_name}\' created')
+
         else:
-            yield um.ServerResponse(
-                user_id=user_id,
-                text='Sorry, bot does not understand you'
-            )
+            yield um.ServerResponse(user_id=user_id, text='Sorry, bot does not understand you')
 
 
-def set_state(user_id, state):
+def set_state(user_id, state: State):
     states[user_id] = state
-    print(f'Set state (user_id: {user_id}, state: {states[user_id]})')
+    print(f'Set state (user_id: {user_id}, state: {state.command}__{state.action}__{state.value})')
 
 
 def remove_state(user_id):
-    print(f'Remove state (user_id: {user_id}, state: {states[user_id]})')
+    state = states[user_id]
+    print(f'Remove state (user_id: {user_id}, state: {state.command}__{state.action}__{state.value})')
     del states[user_id]
-
-
-def state_to_str(state: State):
-    value = ''
-    if state.value is not None:
-        value = f':{state.value}'
-    return f'{state.command}:{state.action}{value}'
-
-
-def str_to_state(string: str):
-    # todo
-    return State('', '')
 
 
 def serve():
