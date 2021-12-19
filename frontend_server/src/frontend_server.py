@@ -1,6 +1,7 @@
 from concurrent import futures
 
 import grpc
+import re
 
 import user_message_pb2 as um
 import user_message_pb2_grpc as umg
@@ -57,6 +58,7 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
 
         elif user_id in states:
             state = states[user_id]
+
             if state.command == 'create_team' and state.action == 'enter_name':
                 create_team_message = bs.CreateTeamMsg(name=text, owner=user_id)
                 entity_id = stub.CreateTeam(create_team_message)
@@ -64,6 +66,17 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
                 team_name = named_info.name
                 remove_state(user_id)
                 yield um.ServerResponse(user_id=user_id, text=f'Team \'{team_name}\' created')
+
+            if state.command == 'add_member' and state.action == 'choose_team':
+                parts = re.split(r'__', text)
+                if parts[0] == '/add_member':
+                    try:
+                        team_id = int(parts[1])
+                    except ValueError:
+                        yield um.ServerResponse(user_id=user_id, text='Team id should be number')
+                    else:
+                        yield um.ServerResponse(user_id=user_id, text='Tag person to add')
+                        set_state(user_id, State(command='add_member', action='tag_member', value=team_id))
 
         else:
             yield um.ServerResponse(user_id=user_id, text='Sorry, bot does not understand you')
