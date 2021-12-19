@@ -6,102 +6,12 @@ from concurrent import futures
 import backend_service_pb2 as bs
 import backend_service_pb2_grpc as bsg
 
-
-class Team:
-    def __init__(self, _owner: int, _name: str) -> None:
-        self.owner = _owner
-        self.name = _name
-        self.members = [_owner]
-    
-    def set_id(self, _id: int) -> None:
-        self.id = _id
-
-    def add_member(self, _member_id: int) -> None:
-        self.members.append(_member_id)
-
-
-class TeamsRepo:
-    def __init__(self) -> None:
-        self.__teams = []
-
-    def add_team(self, team: Team) -> int:
-        team.set_id(len(self.__teams))
-        self.__teams.append(team)
-        return team.id
-
-    def get_teams_by_owner(self, _owner: int) -> Iterable[Team]:
-        for team in self.__teams:
-            if team.owner == _owner:
-                yield team
-
-    def get_team(self, _id: int) -> Team:
-        return self.__teams[_id]
-
-    def add_member_to_team(self, _team_id: int, _member_id: int) -> None:
-        self.__teams[_team_id].add_member(_member_id)
+from team_policy import TeamPolicy, policy_from_msg
+from teams import Team, TeamsRepo
+from meetings import Meeting, MeetingsRepo, meeting_from_msg
 
 
 teamsRepo = TeamsRepo()
-
-
-class Meeting:
-    def __init__(self, _creator: int, _team: int):
-        self.id = -1
-        self.creator = _creator
-        self.team = _team
-        self.desc = ''
-        self.time = 0
-        self.participants = [_creator]
-
-    def set_id(self, _id: int) -> None:
-        self.id = _id
-
-    def add_participant(self, _participant: int) -> None:
-        self.participants.append(_participant)
-
-    def to_proto(self) -> bs.MeetingInfo:
-        return bs.MeetingInfo(
-            id=self.id,
-            creator=self.creator,
-            team=self.team,
-            desc=self.desc,
-            time=self.time
-        )
-
-
-def meeting_from_msg(info: bs.MeetingInfo) -> Meeting:
-    meeting = Meeting(info.creator, info.team)
-    meeting.id = info.id
-    meeting.desc = info.desc
-    meeting.time = info.time
-    return meeting
-
-
-class MeetingsRepo:
-    def __init__(self):
-        self.__meetings = []
-
-    def add_meeting(self, meeting: Meeting):
-        meeting.set_id(len(self.__meetings))
-        self.__meetings.append(meeting)
-        return meeting.id
-
-    def update_meeting(self, meeting: Meeting):
-        self.__meetings[meeting.id].desc = meeting.desc
-        self.__meetings[meeting.id].time = meeting.time
-
-    def get_meetings_by_owner(self, owner: int) -> Iterable[Meeting]:
-        for meeting in self.__meetings:
-            if meeting.creator == owner:
-                yield meeting
-
-    def add_participant(self, meeting_id: int, user_id: int):
-        self.__meetings[meeting_id].add_participant(user_id)
-
-    def get_meeting(self, meeting_id: int) -> Meeting:
-        return self.__meetings[meeting_id]
-
-
 meetingsRepo = MeetingsRepo()
 
 
@@ -132,7 +42,8 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
 
     def GetOwnedMeetings(self, request, context):
         for meeting in meetingsRepo.get_meetings_by_owner(request.id):
-            yield bs.NamedInfo(id=meeting.id, name=meeting.desc)
+            if meeting.approved:
+                yield bs.NamedInfo(id=meeting.id, name=meeting.desc)
 
     def AddParticipant(self, request, context):
         meetingsRepo.add_participant(request.object, request.subject)
@@ -140,6 +51,33 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
 
     def GetMeetingInfo(self, request, context):
         return meetingsRepo.get_meeting(request.id).to_proto()
+
+    def GetTeamMembers(self, request, context):
+        for member in teamsRepo.get_team_members(request.id):
+            yield bs.EntityId(id=member)
+
+    def ApproveMeeting(self, request, context):
+        meetingsRepo.approve_meeting(request.id)
+        return bs.SimpleResponse(ok=True)
+
+    def GetGroupMeetings(self, request, context):
+        for meeting in meetingsRepo.get_meetings_by_group(request.id):
+            yield bs.NamedInfo(id=meeting.id, name=meeting.desc)
+    
+    def GetGroupOwner(self, request, context):
+        return bs.EntityId(id=teamsRepo.get_team(request.id).owner)
+
+    def GetGroupPolicy(self, request, context):
+        policy = teamsRepo.get_team(request.id).policy
+        return bs.TeamPolicy(
+            groupId=request.id, 
+            allowUsersToCreateMeetings=policy.allow_users_to_create_meetings, 
+            needApproveForMeetingCreation=policy.need_approve_for_meeting_creation
+        )
+
+    def SetGroupPolicy(self, request, context):
+        teamsRepo.set_team_policy(request.groupId, policy_from_msg(request))
+        return bs.SimpleResponse(ok=True)
 
 
 def serve():

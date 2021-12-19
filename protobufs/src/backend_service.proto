@@ -31,15 +31,28 @@ message Participating {
     required int64 subject = 2;
 }
 
+message TeamPolicy {
+    required int64 groupId = 1;
+    required bool allowUsersToCreateMeetings = 2;
+    required bool needApproveForMeetingCreation = 3;
+}
+
 service BackendService {
     rpc CreateTeam (CreateTeamMsg) returns (EntityId);
     rpc GetOwnedTeams (EntityId) returns (stream NamedInfo);
     rpc GetTeamInfo (EntityId) returns (NamedInfo);
     rpc AddTeamMember (Participating) returns (SimpleResponse);
+    rpc GetTeamMembers (EntityId) returns (stream EntityId);
 
     rpc CreateMeeting (MeetingInfo) returns (EntityId);
     rpc UpdateMeetingInfo (MeetingInfo) returns (SimpleResponse);
     rpc GetOwnedMeetings (EntityId) returns (stream NamedInfo);
     rpc AddParticipant (Participating) returns (SimpleResponse);
     rpc GetMeetingInfo (EntityId) returns (MeetingInfo);
+    rpc ApproveMeeting (EntityId) returns (SimpleResponse);
+    rpc GetGroupMeetings (EntityId) returns (stream NamedInfo);
+
+    rpc GetGroupOwner (EntityId) returns (EntityId);
+    rpc GetGroupPolicy (EntityId) returns (TeamPolicy);
+    rpc SetGroupPolicy (TeamPolicy) returns (SimpleResponse);
 }
