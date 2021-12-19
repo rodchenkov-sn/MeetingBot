@@ -109,6 +109,11 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
                         participating = bs.Participating(object=invited_team_id, subject=user_id)
                         simple_response = stub.AddTeamMember(participating)
                         if simple_response.ok:
+                            team_entity_id = bs.EntityId(id=invited_team_id)
+                            owner_entity_id = stub.GetGroupOwner(team_entity_id)
+                            owner_id = owner_entity_id.id
+                            yield um.ServerResponse(user_id=owner_id,
+                                                    text=f'User \'{user_id}\' was added to team \'{invited_team_id}\'')
                             yield um.ServerResponse(user_id=user_id,
                                                     text=f'You were added to team \'{invited_team_id}\'')
                             remove_state(user_id)
@@ -122,6 +127,11 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
                     except ValueError:
                         yield um.ServerResponse(user_id=user_id, text='Team id should be number')
                     else:
+                        team_entity_id = bs.EntityId(id=invited_team_id)
+                        owner_entity_id = stub.GetGroupOwner(team_entity_id)
+                        owner_id = owner_entity_id.id
+                        yield um.ServerResponse(user_id=owner_id,
+                                                text=f'User \'{user_id}\' declined invitation to team \'{invited_team_id}\'')
                         yield um.ServerResponse(user_id=user_id,
                                                 text=f'You declined to join team \'{invited_team_id}\'')
                         remove_state(user_id)
