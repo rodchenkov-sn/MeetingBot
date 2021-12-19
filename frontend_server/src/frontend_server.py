@@ -57,7 +57,7 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
                 yield um.ServerResponse(user_id=user_id, text='You do not own any team')
 
         elif user_id in states:
-            state = states[user_id]
+            state = get_state(user_id)
 
             if state.command == 'create_team' and state.action == 'enter_name':
                 create_team_message = bs.CreateTeamMsg(name=text, owner=user_id)
@@ -71,12 +71,35 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
                 parts = re.split(r'__', text)
                 if parts[0] == '/add_member':
                     try:
-                        team_id = int(parts[1])
+                        chosen_team_id = int(parts[1])
                     except ValueError:
                         yield um.ServerResponse(user_id=user_id, text='Team id should be number')
                     else:
                         yield um.ServerResponse(user_id=user_id, text='Tag person to add')
-                        set_state(user_id, State(command='add_member', action='tag_member', value=team_id))
+                        set_state(user_id, State(command='add_member', action='tag_member', value=chosen_team_id))
+
+            if state.command == 'add_member' and state.action == 'tag_member':
+                text = re.sub(r'\[', '', text)
+                text = re.sub(r']', '', text)
+                try:
+                    tagged_user_id = int(text)
+                except ValueError:
+                    yield um.ServerResponse(user_id=user_id, text='Tag person again, please')
+                else:
+                    state = get_state(user_id)
+                    team_id = state.value
+                    entity_id = bs.EntityId(id=team_id)
+                    named_info = stub.GetTeamInfo(entity_id)
+                    team_name = named_info.name
+
+                    remove_state(user_id)
+                    yield um.ServerResponse(user_id=user_id, text='Invitation sent')
+
+                    set_state(tagged_user_id, State(command='invited_to_team', action='accept_decline', value=team_id))
+                    yield um.ServerResponse(user_id=tagged_user_id, text=f'You were invited to team \'{team_name}\'')
+                    yield um.ServerResponse(user_id=tagged_user_id, text=f'/accept__{team_id}')
+                    yield um.ServerResponse(user_id=tagged_user_id, text=f'/decline__{team_id}')
+
 
         else:
             yield um.ServerResponse(user_id=user_id, text='Sorry, bot does not understand you')
@@ -85,6 +108,10 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
 def set_state(user_id, state: State):
     states[user_id] = state
     print(f'Set state (user_id: {user_id}, state: {state.command}__{state.action}__{state.value})')
+
+
+def get_state(user_id):
+    return states[user_id]
 
 
 def remove_state(user_id):
