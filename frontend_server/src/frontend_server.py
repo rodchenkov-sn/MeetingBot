@@ -17,17 +17,15 @@ states = dict()
 
 class State:
     def __init__(self, command: str, action: str, value: int = None):
-        self.command = command
-        self.action = action
+        self.action = command
+        self.sub_action = action
         self.value = value
 
     def to_str(self):
         value = ''
         if self.value is not None:
             value = f'__{self.value}'
-        return f'{self.command}__{self.action}{value}'
-
-    # def from_str(self, string: str):  # todo
+        return f'{self.action}__{self.sub_action}{value}'
 
 
 class UserMessageHandler(umg.UserMessageHandlerServicer):
@@ -59,7 +57,7 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
         elif user_id in states:
             state = get_state(user_id)
 
-            if state.command == 'create_team' and state.action == 'enter_name':
+            if state.action == 'create_team' and state.sub_action == 'enter_name':
                 create_team_message = bs.CreateTeamMsg(name=text, owner=user_id)
                 entity_id = stub.CreateTeam(create_team_message)
                 named_info = stub.GetTeamInfo(entity_id)
@@ -67,7 +65,7 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
                 remove_state(user_id)
                 yield um.ServerResponse(user_id=user_id, text=f'Team \'{team_name}\' created')
 
-            if state.command == 'add_member' and state.action == 'choose_team':
+            elif state.action == 'add_member' and state.sub_action == 'choose_team':
                 parts = re.split(r'__', text)
                 if parts[0] == '/add_member':
                     try:
@@ -78,7 +76,7 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
                         yield um.ServerResponse(user_id=user_id, text='Tag person to add')
                         set_state(user_id, State(command='add_member', action='tag_member', value=chosen_team_id))
 
-            if state.command == 'add_member' and state.action == 'tag_member':
+            elif state.action == 'add_member' and state.sub_action == 'tag_member':
                 text = re.sub(r'\[', '', text)
                 text = re.sub(r']', '', text)
                 try:
@@ -100,6 +98,33 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
                     yield um.ServerResponse(user_id=tagged_user_id, text=f'/accept__{team_id}')
                     yield um.ServerResponse(user_id=tagged_user_id, text=f'/decline__{team_id}')
 
+            elif state.action == 'invited_to_team' and state.sub_action == 'accept_decline':
+                parts = re.split(r'__', text)
+                if parts[0] == '/accept':
+                    try:
+                        invited_team_id = int(parts[1])
+                    except ValueError:
+                        yield um.ServerResponse(user_id=user_id, text='Team id should be number')
+                    else:
+                        participating = bs.Participating(object=invited_team_id, subject=user_id)
+                        simple_response = stub.AddTeamMember(participating)
+                        if simple_response.ok:
+                            yield um.ServerResponse(user_id=user_id,
+                                                    text=f'You were added to team \'{invited_team_id}\'')
+                            remove_state(user_id)
+                        else:
+                            yield um.ServerResponse(user_id=user_id,
+                                                    text=f'You were not added to team \'{invited_team_id}\'')
+
+                elif parts[0] == '/decline':
+                    try:
+                        invited_team_id = int(parts[1])
+                    except ValueError:
+                        yield um.ServerResponse(user_id=user_id, text='Team id should be number')
+                    else:
+                        yield um.ServerResponse(user_id=user_id,
+                                                text=f'You declined to join team \'{invited_team_id}\'')
+                        remove_state(user_id)
 
         else:
             yield um.ServerResponse(user_id=user_id, text='Sorry, bot does not understand you')
@@ -107,7 +132,7 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
 
 def set_state(user_id, state: State):
     states[user_id] = state
-    print(f'Set state (user_id: {user_id}, state: {state.command}__{state.action}__{state.value})')
+    print(f'Set state (user_id: {user_id}, state: {state.action}__{state.sub_action}__{state.value})')
 
 
 def get_state(user_id):
@@ -116,7 +141,7 @@ def get_state(user_id):
 
 def remove_state(user_id):
     state = states[user_id]
-    print(f'Remove state (user_id: {user_id}, state: {state.command}__{state.action}__{state.value})')
+    print(f'Remove state (user_id: {user_id}, state: {state.action}__{state.sub_action}__{state.value})')
     del states[user_id]
 
 
