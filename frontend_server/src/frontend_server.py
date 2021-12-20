@@ -24,8 +24,16 @@ stateRepo = StateRepo()
 
 
 def get_help_message(uid: int) -> um.ServerResponse:
+    create_team = '/create_team to add team\n'
+    invite_member = '/invite_member to invite user\n'
+    create_meeting = '/create_meeting to create meeting\n'
+    invite_to_meeting = '/invite_to_meeting to invite to meeting\n'
+    add_daughter_team = '/add_daughter_team to add daughter team\n'
+    edit_policy = '/edit_policy to edit team policy\n'
+    add_to_meeting = '/add_to_meeting - to add to meeting\n'
+    help_cmd = '\n/help to see this message'
     return um.ServerResponse(user_id=uid,
-                             text='/create_team to add team\n/invite_member to invite user\n/create_meeting to create meeting\n/invite_to_meeting to invite to meeting\n/add_daughter_team to add daughter team\n/edit_policy to edit team policy\n\n/help to see this message')
+                             text=f'{create_team}{invite_member}{create_meeting}{invite_to_meeting}{add_daughter_team}{edit_policy}{add_to_meeting}{help_cmd}')
 
 
 class StartCmdHandler(RequestHandler):
@@ -230,9 +238,10 @@ class MeetingInviteReactionCmdHandler(RequestHandler):
         creator_id = meeting_info.creator
         if text.startswith('/accept_meeting_invite'):
             stub.AddParticipant(bs.Participating(object=meeting_id, subject=uid))
+            meeting_date = datetime.fromtimestamp(meeting_info.time)
             return [
                 um.ServerResponse(user_id=uid, text='You accepted meeting invitation'),
-                um.ServerResponse(user_id=uid, text=f'Meeting {meeting_info.desc} starts at {meeting_info.time}'),
+                um.ServerResponse(user_id=uid, text=f'Meeting {meeting_info.desc} starts at {meeting_date}'),
                 um.ServerResponse(user_id=creator_id, text=f'[[{uid}]] accepted meeting invitation')
             ]
         else:
@@ -315,6 +324,40 @@ class EditPolicyCmdHandler(RequestHandler):
             ]
 
 
+class AddToMeetingCmdHandler(RequestHandler):
+    def handle_request(self, request) -> List[um.ServerResponse]:
+        uid = request.user_id
+        text = request.text
+        state = stateRepo.get_state(uid)
+        if request.text == '/add_to_meeting':
+            msg = ''
+            meetings = stub.GetOwnedMeetings(bs.EntityId(id=uid))
+            for meeting in meetings:
+                msg += f'/add_to_meeting{meeting.id} -- to {meeting.name}\n'
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
+        elif state is None:
+            meeting_id = int(text[15:])
+            stateRepo.set_state(uid, State('adding_to_meeting', meeting_id))
+            return [
+                um.ServerResponse(user_id=uid, text='Tag one or multiple users')
+            ]
+        else:
+            meeting_id = state.argument
+            stateRepo.clear_state(uid)
+            mentioned_users = map(lambda m: int(m[2:len(m) - 2]), re.findall(r'\[\[\d+\]\]', text))
+            team_id = stub.GetMeetingInfo(bs.EntityId(id=meeting_id)).team
+            invitable_members = map(lambda x: x.id, stub.GetInvitableMembers(bs.EntityId(id=team_id)))
+            for mu in mentioned_users:
+                if mu in invitable_members:
+                    stub.AddParticipant(bs.Participating(object=meeting_id, subject=mu))
+            return [
+                um.ServerResponse(user_id=uid, text='Users were added to meeting'),
+                get_help_message(uid)
+            ]
+
+
 commandHandlers = CommandHandlers({
     '/start': StartCmdHandler(),
     '/help': StartCmdHandler(),
@@ -329,7 +372,8 @@ commandHandlers = CommandHandlers({
     '/accept_meeting_invite': MeetingInviteReactionCmdHandler(),
     '/reject_meeting_invite': MeetingInviteReactionCmdHandler(),
     '/add_daughter_team': AddDaughterTeamCmdHandler(),
-    '/edit_policy': EditPolicyCmdHandler()
+    '/edit_policy': EditPolicyCmdHandler(),
+    '/add_to_meeting': AddToMeetingCmdHandler()
 })
 
 statesHandlers = StatesHandlers({
@@ -339,7 +383,8 @@ statesHandlers = StatesHandlers({
     'setting_meeting_time': CreateMeetingCmdHandler(),
     'inviting_to_meeting': InviteToMeetingCmdHandler(),
     'adding_daughter_team': AddDaughterTeamCmdHandler(),
-    'editing_policy': EditPolicyCmdHandler()
+    'editing_policy': EditPolicyCmdHandler(),
+    'adding_to_meeting': AddToMeetingCmdHandler()
 })
 
 
