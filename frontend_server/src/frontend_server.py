@@ -31,9 +31,10 @@ def get_help_message(uid: int) -> um.ServerResponse:
     add_daughter_team = '/add_daughter_team to add daughter team\n'
     edit_policy = '/edit_policy to edit team policy\n'
     add_to_meeting = '/add_to_meeting - to add to meeting\n'
+    update_meeting_time = '/update_meeting_time - to update meeting time\n'
     help_cmd = '\n/help to see this message'
     return um.ServerResponse(user_id=uid,
-                             text=f'{create_team}{invite_member}{create_meeting}{invite_to_meeting}{add_daughter_team}{edit_policy}{add_to_meeting}{help_cmd}')
+                             text=f'{create_team}{invite_member}{create_meeting}{invite_to_meeting}{add_daughter_team}{edit_policy}{add_to_meeting}{update_meeting_time}{help_cmd}')
 
 
 class StartCmdHandler(RequestHandler):
@@ -362,6 +363,44 @@ class AddToMeetingCmdHandler(RequestHandler):
             return response
 
 
+class UpdateMeetingTimeCmdHandler(RequestHandler):
+    def handle_request(self, request) -> List[um.ServerResponse]:
+        uid = request.user_id
+        text = request.text
+        state = stateRepo.get_state(uid)
+        if request.text == '/update_meeting_time':
+            msg = ''
+            meetings = stub.GetOwnedMeetings(bs.EntityId(id=uid))
+            for meeting in meetings:
+                msg += f'/update_meeting_time{meeting.id} -- of {meeting.name}\n'
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
+        elif state is None:
+            meeting_id = int(text[20:])
+            stateRepo.set_state(uid, State('updating_meeting_time', meeting_id))
+            return [
+                um.ServerResponse(user_id=uid, text='Enter datetime (in format DD-MM-YYYY HH:MM):')
+            ]
+        else:
+            meeting_id = state.argument
+            stateRepo.clear_state(uid)
+            dt = datetime.strptime(text, '%d-%m-%Y %H:%M')
+            stub.UpdateMeetingInfo(bs.MeetingInfo(
+                id=meeting_id,
+                creator=-1,  # not important
+                team=-1,  # not important
+                desc='',  # not important
+                time=int(dt.timestamp())
+            ))
+            response = []
+            meeting_info = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
+            meeting_date = datetime.fromtimestamp(meeting_info.time)
+            response.append(um.ServerResponse(user_id=uid, text=f'{meeting_info.desc} meeting time was updated to {meeting_date}'))
+            response.append(get_help_message(uid))
+            return response
+
+
 commandHandlers = CommandHandlers({
     '/start': StartCmdHandler(),
     '/help': StartCmdHandler(),
@@ -377,7 +416,8 @@ commandHandlers = CommandHandlers({
     '/reject_meeting_invite': MeetingInviteReactionCmdHandler(),
     '/add_daughter_team': AddDaughterTeamCmdHandler(),
     '/edit_policy': EditPolicyCmdHandler(),
-    '/add_to_meeting': AddToMeetingCmdHandler()
+    '/add_to_meeting': AddToMeetingCmdHandler(),
+    '/update_meeting_time': UpdateMeetingTimeCmdHandler()
 })
 
 statesHandlers = StatesHandlers({
@@ -388,7 +428,8 @@ statesHandlers = StatesHandlers({
     'inviting_to_meeting': InviteToMeetingCmdHandler(),
     'adding_daughter_team': AddDaughterTeamCmdHandler(),
     'editing_policy': EditPolicyCmdHandler(),
-    'adding_to_meeting': AddToMeetingCmdHandler()
+    'adding_to_meeting': AddToMeetingCmdHandler(),
+    'updating_meeting_time': UpdateMeetingTimeCmdHandler()
 })
 
 
