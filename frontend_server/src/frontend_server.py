@@ -26,7 +26,7 @@ stateRepo = StateRepo()
 
 
 def get_help_message(uid: int) -> um.ServerResponse:
-    return um.ServerResponse(user_id=uid, text='/create_team to add team\n/invite_member to invite user\n/create_meeting to create meeting\n/invite_to_meeting to invite to meeting\n\n/help to see this message')
+    return um.ServerResponse(user_id=uid, text='/create_team to add team\n/invite_member to invite user\n/create_meeting to create meeting\n/invite_to_meeting to invite to meeting\n/add_daughter_team to add daughter team\n\n/help to see this message')
 
 
 class StartCmdHandler(RequestHandler):
@@ -228,7 +228,7 @@ class MeetingInviteReactionCmdHandler(RequestHandler):
     def handle_request(self, request) -> List[um.ServerResponse]:
         uid = request.user_id
         text = request.text
-        meeting_id = int(text[18:])
+        meeting_id = int(text[22:])
         meeting_info = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
         creator_id = meeting_info.id
         if text.startswith('/accept_meeting_invite'):
@@ -245,6 +245,37 @@ class MeetingInviteReactionCmdHandler(RequestHandler):
             ]
 
 
+class AddDaughterTeamCmdHandler(RequestHandler):
+    def handle_request(self, request) -> List[um.ServerResponse]:
+        uid = request.user_id
+        text = request.text
+        state = stateRepo.get_state(uid)
+        if text == '/add_daughter_team':
+            msg = ''
+            teams = stub.GetOwnedTeams(bs.EntityId(id=uid))
+            for team in teams:
+                msg += f'/add_daughter_team{team.id} -- add daughter team to {team.name}\n'
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
+        elif state is None:
+            parent_team_id = int(text[18:])
+            stateRepo.set_state(uid, State('adding_daughter_team', parent_team_id))
+            return [
+                um.ServerResponse(user_id=uid, text='Enter daughter team id:')
+            ]
+        else:
+            parent_team_id = state.argument
+            stateRepo.clear_state(uid)
+            daughter_team_id = int(text)
+            stub.AddParentTeam(bs.Participating(object=parent_team_id, subject=daughter_team_id))
+            parent_team_name = stub.GetTeamInfo(bs.EntityId(id=parent_team_id)).name
+            daughter_team_name = stub.GetTeamInfo(bs.EntityId(id=daughter_team_id)).name
+            response = [um.ServerResponse(user_id=uid, text=f'{daughter_team_name} team is now a daughter of {parent_team_name} team')]
+            response.append(get_help_message(uid))
+            return response
+
+
 commandHandlers = CommandHandlers({
     '/start': StartCmdHandler(),
     '/help': StartCmdHandler(),
@@ -257,7 +288,8 @@ commandHandlers = CommandHandlers({
     '/reject_meeting': MeetingApproveCmdHandle(),
     '/invite_to_meeting': InviteToMeetingCmdHandler(),
     '/accept_meeting_invite': MeetingInviteReactionCmdHandler(),
-    '/reject_meeting_invite': MeetingInviteReactionCmdHandler()
+    '/reject_meeting_invite': MeetingInviteReactionCmdHandler(),
+    '/add_daughter_team': AddDaughterTeamCmdHandler()
 })
 
 statesHandlers = StatesHandlers({
@@ -265,7 +297,8 @@ statesHandlers = StatesHandlers({
     'inviting_members': InviteUserCmdHandler(),
     'setting_meeting_desc': CreateMeetingCmdHandler(),
     'setting_meeting_time': CreateMeetingCmdHandler(),
-    'inviting_to_meeting': InviteToMeetingCmdHandler()
+    'inviting_to_meeting': InviteToMeetingCmdHandler(),
+    'adding_daughter_team': AddDaughterTeamCmdHandler()
 })
 
 
@@ -279,7 +312,6 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
         for response in responses:
             yield response
         
-
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
