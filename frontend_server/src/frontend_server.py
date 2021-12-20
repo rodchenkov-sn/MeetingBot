@@ -24,8 +24,16 @@ stateRepo = StateRepo()
 
 
 def get_help_message(uid: int) -> um.ServerResponse:
+    create_team = '/create_team to add team\n'
+    invite_member = '/invite_member to invite user\n'
+    create_meeting = '/create_meeting to create meeting\n'
+    invite_to_meeting = '/invite_to_meeting to invite to meeting\n'
+    add_daughter_team = '/add_daughter_team to add daughter team\n'
+    edit_policy = '/edit_policy to edit team policy\n'
+    add_to_meeting = '/add_to_meeting - to add to meeting\n'
+    help_cmd = '\n/help to see this message'
     return um.ServerResponse(user_id=uid,
-                             text='/create_team to add team\n/invite_member to invite user\n/create_meeting to create meeting\n/invite_to_meeting to invite to meeting\n/add_daughter_team to add daughter team\n/edit_policy to edit team policy\n\n/help to see this message')
+                             text=f'{create_team}{invite_member}{create_meeting}{invite_to_meeting}{add_daughter_team}{edit_policy}{add_to_meeting}{help_cmd}')
 
 
 class StartCmdHandler(RequestHandler):
