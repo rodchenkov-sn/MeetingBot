@@ -27,6 +27,17 @@ class Meeting:
             desc=self.desc,
             time=self.time
         )
+    
+    def serialize(self):
+        return {
+            '_id': self.id,
+            'approved': self.approved,
+            'creator': self.creator,
+            'team': self.team,
+            'desc': self.desc,
+            'time': self.time,
+            'participants': self.participants
+        }
 
 
 def meeting_from_msg(info: bs.MeetingInfo) -> Meeting:
@@ -37,34 +48,47 @@ def meeting_from_msg(info: bs.MeetingInfo) -> Meeting:
     return meeting
 
 
+def meeting_from_mongo(info) -> Meeting:
+    meeting = Meeting(info['creator'], info['team'])
+    meeting.id = info['_id']
+    meeting.time = info['time']
+    meeting.desc = info['desc']
+    meeting.participants = info['participants']
+    meeting.approved = info['approved']
+    return meeting
+
+
 class MeetingsRepo:
     def __init__(self):
-        self.__meetings = []
+        from pymongo import MongoClient
+        client = MongoClient('')
+        self.__collection = client['MeetingBotDB']['Meetings']
 
     def add_meeting(self, meeting: Meeting):
-        meeting.set_id(len(self.__meetings))
-        self.__meetings.append(meeting)
+        from random import randint
+        meeting.id = randint(0, 9e10)
+        self.__collection.insert_one(meeting.serialize())
         return meeting.id
 
     def update_meeting(self, meeting: Meeting):
-        self.__meetings[meeting.id].desc = meeting.desc
-        self.__meetings[meeting.id].time = meeting.time
+        if meeting.desc != '':
+            self.__collection.update_one({'_id': meeting.id}, {'$set': {'desc': meeting.desc}})
+        if meeting.time != -1:
+            self.__collection.update_one({'_id': meeting.id}, {'$set': {'time': meeting.time}})
 
     def get_meetings_by_owner(self, owner: int) -> Iterable[Meeting]:
-        for meeting in self.__meetings:
-            if meeting.creator == owner and meeting.approved:
-                yield meeting
+        cursor = self.__collection.find({'creator': owner, 'approved': True})
+        for item in cursor:
+            yield meeting_from_mongo(item)
 
     def add_participant(self, meeting_id: int, user_id: int):
-        self.__meetings[meeting_id].add_participant(user_id)
+        self.__collection.update_one({'_id': meeting_id}, {'$push': {'participants': user_id}})
 
     def get_meeting(self, meeting_id: int) -> Meeting:
-        return self.__meetings[meeting_id]
+        return meeting_from_mongo(self.__collection.find_one({'_id': meeting_id}))
 
     def approve_meeting(self, meeting_id: int):
-        self.__meetings[meeting_id].approved = True
+        self.__collection.update_one({'_id': meeting_id}, {'$set': {'approved': True}})
 
     def get_meetings_by_group(self, group_id: int) -> Iterable[Meeting]:
-        for meeting in self.__meetings:
-            if meeting.team == group_id and meeting.approved:
-                yield meeting
+        cursor = self.__collection.find({'team': group_id, 'approved': True})
