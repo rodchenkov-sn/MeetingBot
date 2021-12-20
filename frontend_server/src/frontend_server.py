@@ -349,13 +349,17 @@ class AddToMeetingCmdHandler(RequestHandler):
             mentioned_users = map(lambda m: int(m[2:len(m) - 2]), re.findall(r'\[\[\d+\]\]', text))
             team_id = stub.GetMeetingInfo(bs.EntityId(id=meeting_id)).team
             invitable_members = map(lambda x: x.id, stub.GetInvitableMembers(bs.EntityId(id=team_id)))
+            response = []
+            meeting_info = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
+            meeting_date = datetime.fromtimestamp(meeting_info.time)
             for mu in mentioned_users:
                 if mu in invitable_members:
                     stub.AddParticipant(bs.Participating(object=meeting_id, subject=mu))
-            return [
-                um.ServerResponse(user_id=uid, text='Users were added to meeting'),
-                get_help_message(uid)
-            ]
+                    response.append(um.ServerResponse(user_id=mu, text=f'You were added to {meeting_info.desc} meeting'))
+                    response.append(um.ServerResponse(user_id=uid, text=f'Meeting {meeting_info.desc} starts at {meeting_date}'))
+            response.append(um.ServerResponse(user_id=uid, text='Users were added to meeting'))
+            response.append(get_help_message(uid))
+            return response
 
 
 commandHandlers = CommandHandlers({
