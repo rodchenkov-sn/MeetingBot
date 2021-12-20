@@ -26,7 +26,7 @@ stateRepo = StateRepo()
 
 
 def get_help_message(uid: int) -> um.ServerResponse:
-    return um.ServerResponse(user_id=uid, text='/create_team to add team\n/invite_member to invite user\n/create_meeting to create meeting\n\n/help to see this message')
+    return um.ServerResponse(user_id=uid, text='/create_team to add team\n/invite_member to invite user\n/create_meeting to create meeting\n/invite_to_meeting to invite to meeting\n\n/help to see this message')
 
 
 class StartCmdHandler(RequestHandler):
@@ -159,7 +159,7 @@ class CreateMeetingCmdHandler(RequestHandler):
             if uid == group_owner or not group_policy.needApproveForMeetingCreation:
                 stub.ApproveMeeting(bs.EntityId(id=meeting_id))
                 return [ 
-                    um.ServerResponse(user_id=uid, text=f'Meeting created!\n\nYou now cat add participants using /add_participant{meeting_id}\nor invite them with /invite_participant{meeting_id}')
+                    um.ServerResponse(user_id=uid, text=f'Meeting created!')
                 ]
             else:
                 meeting_info = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
@@ -190,6 +190,60 @@ class MeetingApproveCmdHandle(RequestHandler):
             ]
 
 
+# todo: test
+class InviteToMeetingCmdHandler(RequestHandler):
+    def handle_request(self, request) -> List[um.ServerResponse]:
+        uid = request.user_id
+        text = request.text
+        state = stateRepo.get_state(uid)
+        if request.text == '/invite_to_meeting':
+            msg = ''
+            meetings = stub.GetOwnedMeetings(bs.EntityId(id=uid))
+            for meeting in meetings:
+                msg += f'/invite_to_meeting{meeting.id} -- to {meeting.name}'
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
+        elif state is None:
+            meeting_id = int(text[18:])
+            stateRepo.set_state(uid, State('inviting_to_meeting', meeting_id))
+            return [
+                um.ServerResponse(user_id=uid, text='Tag one or multiple users')
+            ]
+        else:
+            meeting_id = state.argument
+            stateRepo.clear_state(uid)
+            mentioned_users = map(lambda m: int(m[2:len(m) - 2]), re.findall(r'\[\[\d+\]\]', text))
+            # fixme: invitable_members is empty (i have only one tg account)
+            invitable_members = map(lambda x: x.id, stub.GetInvitableMembers(bs.EntityId(id=uid)))
+            invite_msg = f'You were invited to meeting {stub.GetMeetingInfo(bs.EntityId(id=meeting_id)).desc} by [[{uid}]]\n\n/accept_meeting_invite{meeting_id} -- accept\n/reject_meeting_invite{meeting_id} -- reject'
+            response = [um.ServerResponse(user_id=mu, text=invite_msg) for mu in mentioned_users if mu in invitable_members]
+            response.append(um.ServerResponse(user_id=uid, text='Invitations to meeting were send'))
+            response.append(get_help_message(uid))
+            return response
+
+
+# todo: test
+class MeetingInviteReactionCmdHandler(RequestHandler):
+    def handle_request(self, request) -> List[um.ServerResponse]:
+        uid = request.user_id
+        text = request.text
+        meeting_id = int(text[18:])
+        meeting_info = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
+        creator_id = meeting_info.id
+        if text.startswith('/accept_meeting_invite'):
+            stub.AddParticipant(bs.Participating(object=meeting_id, subject=uid))
+            return [
+                um.ServerResponse(user_id=uid, text='You accepted meeting invitation'),
+                um.ServerResponse(user_id=uid, text=f'Meeting {meeting_info.desc} starts in 5 minutes', event_id=meeting_id, timestamp=300),
+                um.ServerResponse(user_id=creator_id, text=f'[[{uid}]] accepted meeting invitation')
+            ]
+        else:
+            return [
+                um.ServerResponse(user_id=uid, text='You rejected meeting invitation'),
+                um.ServerResponse(user_id=creator_id, text=f'[[{uid}]] rejected meeting invitation')
+            ]
+
 
 commandHandlers = CommandHandlers({
     '/start': StartCmdHandler(),
@@ -200,14 +254,18 @@ commandHandlers = CommandHandlers({
     '/reject_invite': InviteReactionCmdHandler(),
     '/create_meeting': CreateMeetingCmdHandler(),
     '/approve_meeting': MeetingApproveCmdHandle(),
-    '/reject_meeting': MeetingApproveCmdHandle()
+    '/reject_meeting': MeetingApproveCmdHandle(),
+    '/invite_to_meeting': InviteToMeetingCmdHandler(),
+    '/accept_meeting_invite': MeetingInviteReactionCmdHandler(),
+    '/reject_meeting_invite': MeetingInviteReactionCmdHandler()
 })
 
 statesHandlers = StatesHandlers({
     'creating_team': CreateTeamCmdHandler(),
     'inviting_members': InviteUserCmdHandler(),
     'setting_meeting_desc': CreateMeetingCmdHandler(),
-    'setting_meeting_time': CreateMeetingCmdHandler()
+    'setting_meeting_time': CreateMeetingCmdHandler(),
+    'inviting_to_meeting': InviteToMeetingCmdHandler()
 })
 
 
