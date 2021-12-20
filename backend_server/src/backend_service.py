@@ -1,6 +1,8 @@
+# admin:intervention-tradition-responsible-empirical
+
+import random
 import grpc
 
-from typing import Iterable
 from concurrent import futures
 
 import backend_service_pb2 as bs
@@ -53,7 +55,7 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
         return meetingsRepo.get_meeting(request.id).to_proto()
 
     def GetTeamMembers(self, request, context):
-        for member in teamsRepo.get_team_members(request.id):
+        for member in teamsRepo.get_team(request.id).members:
             yield bs.EntityId(id=member)
 
     def ApproveMeeting(self, request, context):
@@ -79,8 +81,14 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
         teamsRepo.set_team_policy(request.groupId, policy_from_msg(request))
         return bs.SimpleResponse(ok=True)
 
+    def GetGroupsToCreateMeeting(self, request, context):
+        for team in teamsRepo.get_grups_by_member(request.id):
+            if team.owner == request.id or team.policy.allow_users_to_create_meetings:
+                yield bs.NamedInfo(id=team.id, name=team.name)
+
 
 def serve():
+    random.seed()
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     bsg.add_BackendServiceServicer_to_server(BackendServiceHandler(), server)
     server.add_insecure_port('[::]:50052')

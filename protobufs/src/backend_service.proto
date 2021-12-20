@@ -55,4 +55,6 @@ service BackendService {
     rpc GetGroupOwner (EntityId) returns (EntityId);
     rpc GetGroupPolicy (EntityId) returns (TeamPolicy);
     rpc SetGroupPolicy (TeamPolicy) returns (SimpleResponse);
+
+    rpc GetGroupsToCreateMeeting (EntityId) returns (stream NamedInfo);
 }
