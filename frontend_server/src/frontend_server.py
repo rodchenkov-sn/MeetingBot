@@ -15,18 +15,17 @@ import backend_service_pb2_grpc as bsg
 channel = grpc.insecure_channel('localhost:50052')
 stub = bsg.BackendServiceStub(channel)
 
-
 from states import State, StateRepo
 from request_handler import RequestHandler
 from command_handler import CommandHandlers
 from states_handler import StatesHandlers
 
-
 stateRepo = StateRepo()
 
 
 def get_help_message(uid: int) -> um.ServerResponse:
-    return um.ServerResponse(user_id=uid, text='/create_team to add team\n/invite_member to invite user\n/create_meeting to create meeting\n/invite_to_meeting to invite to meeting\n/add_daughter_team to add daughter team\n\n/help to see this message')
+    return um.ServerResponse(user_id=uid,
+                             text='/create_team to add team\n/invite_member to invite user\n/create_meeting to create meeting\n/invite_to_meeting to invite to meeting\n/add_daughter_team to add daughter team\n/edit_policy to edit team policy\n\n/help to see this message')
 
 
 class StartCmdHandler(RequestHandler):
@@ -76,7 +75,7 @@ class InviteUserCmdHandler(RequestHandler):
         else:
             group_id = state.argument
             stateRepo.clear_state(uid)
-            mentioned_users = map(lambda m: int(m[2:len(m)-2]), re.findall(r'\[\[\d+\]\]', text))
+            mentioned_users = map(lambda m: int(m[2:len(m) - 2]), re.findall(r'\[\[\d+\]\]', text))
             invite_msg = f'You were invited to team {stub.GetTeamInfo(bs.EntityId(id=group_id)).name} by [[{uid}]]\n\n/accept_invite{group_id} -- accept\n/reject_invite{group_id} -- reject'
             response = [um.ServerResponse(user_id=mid, text=invite_msg) for mid in mentioned_users]
             response.append(um.ServerResponse(user_id=uid, text='Invitations were send'))
@@ -134,12 +133,12 @@ class CreateMeetingCmdHandler(RequestHandler):
             stateRepo.set_state(uid, State('setting_meeting_time', state.argument, _arg2=state.argument2))
             stub.UpdateMeetingInfo(bs.MeetingInfo(
                 id=meeting_id,
-                creator=-1, #not important
-                team=-1, # not important
+                creator=-1,  # not important
+                team=-1,  # not important
                 desc=text,
                 time=-1
             ))
-            return [ 
+            return [
                 um.ServerResponse(user_id=uid, text='Enter datetime (in format DD-MM-YYYY HH:MM):')
             ]
         elif state.action == 'setting_meeting_time':
@@ -149,16 +148,16 @@ class CreateMeetingCmdHandler(RequestHandler):
             dt = datetime.strptime(text, '%d-%m-%Y %H:%M')
             stub.UpdateMeetingInfo(bs.MeetingInfo(
                 id=meeting_id,
-                creator=-1, #not important
-                team=-1, # not important
-                desc='', # not important
+                creator=-1,  # not important
+                team=-1,  # not important
+                desc='',  # not important
                 time=int(dt.timestamp())
             ))
             group_owner = stub.GetGroupOwner(bs.EntityId(id=group_id)).id
             group_policy = stub.GetGroupPolicy(bs.EntityId(id=group_id))
             if uid == group_owner or not group_policy.needApproveForMeetingCreation:
                 stub.ApproveMeeting(bs.EntityId(id=meeting_id))
-                return [ 
+                return [
                     um.ServerResponse(user_id=uid, text=f'Meeting created!')
                 ]
             else:
@@ -190,7 +189,6 @@ class MeetingApproveCmdHandle(RequestHandler):
             ]
 
 
-# todo: test
 class InviteToMeetingCmdHandler(RequestHandler):
     def handle_request(self, request) -> List[um.ServerResponse]:
         uid = request.user_id
@@ -200,7 +198,7 @@ class InviteToMeetingCmdHandler(RequestHandler):
             msg = ''
             meetings = stub.GetOwnedMeetings(bs.EntityId(id=uid))
             for meeting in meetings:
-                msg += f'/invite_to_meeting{meeting.id} -- to {meeting.name}'
+                msg += f'/invite_to_meeting{meeting.id} -- to {meeting.name}\n'
             return [
                 um.ServerResponse(user_id=uid, text=msg)
             ]
@@ -214,8 +212,8 @@ class InviteToMeetingCmdHandler(RequestHandler):
             meeting_id = state.argument
             stateRepo.clear_state(uid)
             mentioned_users = map(lambda m: int(m[2:len(m) - 2]), re.findall(r'\[\[\d+\]\]', text))
-            # fixme: invitable_members is empty (i have only one tg account)
-            invitable_members = map(lambda x: x.id, stub.GetInvitableMembers(bs.EntityId(id=uid)))
+            team_id = stub.GetMeetingInfo(bs.EntityId(id=meeting_id)).team
+            invitable_members = map(lambda x: x.id, stub.GetInvitableMembers(bs.EntityId(id=team_id)))
             invite_msg = f'You were invited to meeting {stub.GetMeetingInfo(bs.EntityId(id=meeting_id)).desc} by [[{uid}]]\n\n/accept_meeting_invite{meeting_id} -- accept\n/reject_meeting_invite{meeting_id} -- reject'
             response = [um.ServerResponse(user_id=mu, text=invite_msg) for mu in mentioned_users if mu in invitable_members]
             response.append(um.ServerResponse(user_id=uid, text='Invitations to meeting were send'))
@@ -223,19 +221,18 @@ class InviteToMeetingCmdHandler(RequestHandler):
             return response
 
 
-# todo: test
 class MeetingInviteReactionCmdHandler(RequestHandler):
     def handle_request(self, request) -> List[um.ServerResponse]:
         uid = request.user_id
         text = request.text
         meeting_id = int(text[22:])
         meeting_info = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
-        creator_id = meeting_info.id
+        creator_id = meeting_info.creator
         if text.startswith('/accept_meeting_invite'):
             stub.AddParticipant(bs.Participating(object=meeting_id, subject=uid))
             return [
                 um.ServerResponse(user_id=uid, text='You accepted meeting invitation'),
-                um.ServerResponse(user_id=uid, text=f'Meeting {meeting_info.desc} starts in 5 minutes', event_id=meeting_id, timestamp=300),
+                um.ServerResponse(user_id=uid, text=f'Meeting {meeting_info.desc} starts at {meeting_info.time}'),
                 um.ServerResponse(user_id=creator_id, text=f'[[{uid}]] accepted meeting invitation')
             ]
         else:
@@ -276,6 +273,48 @@ class AddDaughterTeamCmdHandler(RequestHandler):
             return response
 
 
+class EditPolicyCmdHandler(RequestHandler):
+    def handle_request(self, request) -> List[um.ServerResponse]:
+        uid = request.user_id
+        text = request.text
+        state = stateRepo.get_state(uid)
+        if text == '/edit_policy':
+            msg = ''
+            teams = stub.GetOwnedTeams(bs.EntityId(id=uid))
+            for team in teams:
+                msg += f'/edit_policy{team.id} -- edit team {team.name}\'s policy\n'
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
+        elif state is None:
+            team_id = int(text[12:])
+            stateRepo.set_state(uid, State('editing_policy', team_id))
+            group_policy = stub.GetGroupPolicy(bs.EntityId(id=team_id))
+            return [
+                um.ServerResponse(user_id=uid, text='Enter 1 or 0 separated with spaces for each policy parameter:'),
+                um.ServerResponse(user_id=uid, text=f'\n1. allow users to create meetings: {group_policy.allowUsersToCreateMeetings}'),
+                um.ServerResponse(user_id=uid, text=f'\n2. need approve for meeting creation: {group_policy.needApproveForMeetingCreation}'),
+                um.ServerResponse(user_id=uid, text=f'\n3. propagate policy: {group_policy.propagatePolicy}'),
+                um.ServerResponse(user_id=uid, text=f'\n4. parent visible: {group_policy.parentVisible}'),
+                um.ServerResponse(user_id=uid, text=f'\n5. propagate admin: {group_policy.propagateAdmin}')
+            ]
+        else:
+            team_id = state.argument
+            stateRepo.clear_state(uid)
+            policy_parameters = re.split(r' ', text)
+            stub.SetGroupPolicy(bs.TeamPolicy(
+                groupId=team_id,
+                allowUsersToCreateMeetings=bool(int(policy_parameters[0])),
+                needApproveForMeetingCreation=bool(int(policy_parameters[1])),
+                propagatePolicy=bool(int(policy_parameters[2])),
+                parentVisible=bool(int(policy_parameters[3])),
+                propagateAdmin=bool(int(policy_parameters[4]))))
+            return [
+                um.ServerResponse(user_id=uid, text=f'Policy updated'),
+                get_help_message(uid)
+            ]
+
+
 commandHandlers = CommandHandlers({
     '/start': StartCmdHandler(),
     '/help': StartCmdHandler(),
@@ -289,7 +328,8 @@ commandHandlers = CommandHandlers({
     '/invite_to_meeting': InviteToMeetingCmdHandler(),
     '/accept_meeting_invite': MeetingInviteReactionCmdHandler(),
     '/reject_meeting_invite': MeetingInviteReactionCmdHandler(),
-    '/add_daughter_team': AddDaughterTeamCmdHandler()
+    '/add_daughter_team': AddDaughterTeamCmdHandler(),
+    '/edit_policy': EditPolicyCmdHandler()
 })
 
 statesHandlers = StatesHandlers({
@@ -298,7 +338,8 @@ statesHandlers = StatesHandlers({
     'setting_meeting_desc': CreateMeetingCmdHandler(),
     'setting_meeting_time': CreateMeetingCmdHandler(),
     'inviting_to_meeting': InviteToMeetingCmdHandler(),
-    'adding_daughter_team': AddDaughterTeamCmdHandler()
+    'adding_daughter_team': AddDaughterTeamCmdHandler(),
+    'editing_policy': EditPolicyCmdHandler()
 })
 
 
@@ -311,7 +352,7 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
             responses = [get_help_message(request.user_id)]
         for response in responses:
             yield response
-        
+
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
