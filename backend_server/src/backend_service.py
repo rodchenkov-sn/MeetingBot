@@ -74,7 +74,10 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
         return bs.TeamPolicy(
             groupId=request.id, 
             allowUsersToCreateMeetings=policy.allow_users_to_create_meetings, 
-            needApproveForMeetingCreation=policy.need_approve_for_meeting_creation
+            needApproveForMeetingCreation=policy.need_approve_for_meeting_creation,
+            propagatePolicy=policy.propagate_policy,
+            parentVisible=policy.parent_visible,
+            propagateAdmin=policy.propagate_admin
         )
 
     def SetGroupPolicy(self, request, context):
