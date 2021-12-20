@@ -26,7 +26,7 @@ message MeetingInfo {
     required int64 time = 5;
 }
 
-message Participating {
+message Participating { // the subject is 'part' of the object
     required int64 object = 1;
     required int64 subject = 2;
 }
@@ -35,6 +35,9 @@ message TeamPolicy {
     required int64 groupId = 1;
     required bool allowUsersToCreateMeetings = 2;
     required bool needApproveForMeetingCreation = 3;
+    required bool propagatePolicy = 4;
+    required bool parentVisible = 5;
+    required bool propagateAdmin = 6;
 }
 
 service BackendService {
@@ -57,4 +60,10 @@ service BackendService {
     rpc SetGroupPolicy (TeamPolicy) returns (SimpleResponse);
 
     rpc GetGroupsToCreateMeeting (EntityId) returns (stream NamedInfo);
+
+    rpc AddParentTeam (Participating) returns (SimpleResponse);
+
+    rpc GetInvitableMembers (EntityId) returns (stream EntityId);
+
+    rpc GetGroupOwners (EntityId) returns (stream EntityId);
 }

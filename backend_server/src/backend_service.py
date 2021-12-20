@@ -86,6 +86,18 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
             if team.owner == request.id or team.policy.allow_users_to_create_meetings:
                 yield bs.NamedInfo(id=team.id, name=team.name)
 
+    def AddParentTeam(self, request, context):
+        teamsRepo.add_parent(request.subject, request.object)
+        return bs.SimpleResponse(ok=True)
+
+    def GetInvitableMembers(self, request, context):
+        for member in teamsRepo.get_invitable_members(request.id):
+            yield bs.EntityId(id=member)
+
+    def GetGroupOwners(self, request, context):
+        for admin in teamsRepo.get_admins(request.id):
+            yield bs.EntityId(id=admin)
+
 
 def serve():
     random.seed()
