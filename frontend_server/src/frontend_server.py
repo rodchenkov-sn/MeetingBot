@@ -238,9 +238,10 @@ class MeetingInviteReactionCmdHandler(RequestHandler):
         creator_id = meeting_info.creator
         if text.startswith('/accept_meeting_invite'):
             stub.AddParticipant(bs.Participating(object=meeting_id, subject=uid))
+            meeting_date = datetime.fromtimestamp(meeting_info.time)
             return [
                 um.ServerResponse(user_id=uid, text='You accepted meeting invitation'),
-                um.ServerResponse(user_id=uid, text=f'Meeting {meeting_info.desc} starts at {meeting_info.time}'),
+                um.ServerResponse(user_id=uid, text=f'Meeting {meeting_info.desc} starts at {meeting_date}'),
                 um.ServerResponse(user_id=creator_id, text=f'[[{uid}]] accepted meeting invitation')
             ]
         else:
