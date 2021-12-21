@@ -47,7 +47,7 @@ def sendMessage(id: int, text: str):
 
 def mentions_to_ids(text: str) -> str:
     def m_to_i(s: Match[str]) -> str:
-        id = username_id_redis.get(s.string)
+        id = username_id_redis.get(s.group())
         if id is None:
             return '!!ERR!!'
         else:
@@ -57,7 +57,7 @@ def mentions_to_ids(text: str) -> str:
 
 def ids_to_mentions(text: str) -> str:
     def i_to_m(id: Match[str]) -> str:
-        id_s = id.string
+        id_s = id.group()
         id_s = id_s[2:len(id_s)-2]
         un = id_username_redis.get(id_s)
         if un is None:
