@@ -61,7 +61,7 @@ def meeting_from_mongo(info) -> Meeting:
 class MeetingsRepo:
     def __init__(self):
         from pymongo import MongoClient
-        client = MongoClient('')
+        client = MongoClient()
         self.__collection = client['MeetingBotDB']['Meetings']
 
     def add_meeting(self, meeting: Meeting):
@@ -92,3 +92,11 @@ class MeetingsRepo:
 
     def get_meetings_by_group(self, group_id: int) -> Iterable[Meeting]:
         cursor = self.__collection.find({'team': group_id, 'approved': True})
+        for item in cursor:
+            yield meeting_from_mongo(item)
+
+    def get_meetings_my_user(self, user_id: int) -> Iterable[Meeting]:
+        cursor = self.__collection.find({'approved': True, 'participants': user_id})
+        for item in cursor:
+            yield meeting_from_mongo(item)
+

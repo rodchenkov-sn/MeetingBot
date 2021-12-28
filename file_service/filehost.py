@@ -2,7 +2,7 @@ import os
 
 from flask import Flask, request, abort, jsonify, send_from_directory
 
-HOST = "~/PycharmProjects/m"
+HOST = "."
 
 UPLOAD_DIRECTORY = f"{HOST}/project/api_uploaded_files"
 

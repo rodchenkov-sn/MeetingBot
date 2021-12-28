@@ -46,6 +46,7 @@ service BackendService {
     rpc GetTeamInfo (EntityId) returns (NamedInfo);
     rpc AddTeamMember (Participating) returns (SimpleResponse);
     rpc GetTeamMembers (EntityId) returns (stream EntityId);
+    rpc GetTeamsByUser (EntityId) returns (stream NamedInfo);
 
     rpc CreateMeeting (MeetingInfo) returns (EntityId);
     rpc UpdateMeetingInfo (MeetingInfo) returns (SimpleResponse);
@@ -54,6 +55,9 @@ service BackendService {
     rpc GetMeetingInfo (EntityId) returns (MeetingInfo);
     rpc ApproveMeeting (EntityId) returns (SimpleResponse);
     rpc GetGroupMeetings (EntityId) returns (stream NamedInfo);
+
+    rpc GetUserMeetings (EntityId) returns (stream NamedInfo);
+    rpc GetMeetingMembers (EntityId) returns (stream EntityId);
 
     rpc GetGroupOwner (EntityId) returns (EntityId);
     rpc GetGroupPolicy (EntityId) returns (TeamPolicy);
@@ -66,4 +70,7 @@ service BackendService {
     rpc GetInvitableMembers (EntityId) returns (stream EntityId);
 
     rpc GetGroupOwners (EntityId) returns (stream EntityId);
+
+    rpc AddFileToTeam (Participating) returns (SimpleResponse);
+    rpc GetAvailableFiles (EntityId) returns (stream EntityId);
 }

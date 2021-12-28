@@ -17,6 +17,13 @@ teamsRepo = TeamsRepo()
 meetingsRepo = MeetingsRepo()
 
 
+import calendar_service_pb2 as cs
+import calendar_service_pb2_grpc as css
+
+channel_calendar = grpc.insecure_channel('localhost:50053')
+calendar_stub = css.CalendarServiceStub(channel_calendar)
+
+
 class BackendServiceHandler(bsg.BackendServiceServicer):
     def CreateTeam(self, request, context):
         team_id = teamsRepo.add_team(Team(request.owner, request.name))
@@ -40,6 +47,15 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
 
     def UpdateMeetingInfo(self, request, context):
         meetingsRepo.update_meeting(meeting_from_msg(request))
+        m = meetingsRepo.get_meeting(request.id)
+        if m.time > 0 and m.desc != '':
+            for uid in set(m.participants):
+                calendar_stub.PushEvent(cs.CalendarEvent(
+                    user_id=uid,
+                    meeting_id=m.id,
+                    desc=m.desc,
+                    time=m.time
+                ))
         return bs.SimpleResponse(ok=True)
 
     def GetOwnedMeetings(self, request, context):
@@ -49,6 +65,14 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
 
     def AddParticipant(self, request, context):
         meetingsRepo.add_participant(request.object, request.subject)
+        m = meetingsRepo.get_meeting(request.object)
+        for uid in set(m.participants):
+            calendar_stub.PushEvent(cs.CalendarEvent(
+                user_id=uid,
+                meeting_id=m.id,
+                desc=m.desc,
+                time=m.time
+            ))
         return bs.SimpleResponse(ok=True)
 
     def GetMeetingInfo(self, request, context):
@@ -60,6 +84,14 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
 
     def ApproveMeeting(self, request, context):
         meetingsRepo.approve_meeting(request.id)
+        m = meetingsRepo.get_meeting(request.id)
+        for uid in set(m.participants):
+            calendar_stub.PushEvent(cs.CalendarEvent(
+                user_id=uid,
+                meeting_id=m.id,
+                desc=m.desc,
+                time=m.time
+            ))
         return bs.SimpleResponse(ok=True)
 
     def GetGroupMeetings(self, request, context):
@@ -100,6 +132,30 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
     def GetGroupOwners(self, request, context):
         for admin in teamsRepo.get_admins(request.id):
             yield bs.EntityId(id=admin)
+
+    def GetUserMeetings(self, request, context):
+        uid = request.id
+        for meeting in meetingsRepo.get_meetings_my_user(uid):
+            yield bs.NamedInfo(id=meeting.id, name=meeting.desc)
+
+    def GetMeetingMembers(self, request, context):
+        mid = request.id
+        meeting = meetingsRepo.get_meeting(mid)
+        for uid in set(meeting.participants):
+            yield bs.EntityId(id=uid)
+
+    def AddFileToTeam(self, request, context):
+        print(request)
+        teamsRepo.add_file_to_team(request.object, request.subject)
+        return bs.SimpleResponse(ok=True)
+
+    def GetAvailableFiles(self, request, context):
+        for fid in teamsRepo.get_available_files(request.id):
+            yield bs.EntityId(id=fid)
+
+    def GetTeamsByUser(self, request, context):
+        for team in teamsRepo.get_teams_by_user(request.id):
+            yield bs.NamedInfo(id=team.id, name=team.name)
 
 
 def serve():

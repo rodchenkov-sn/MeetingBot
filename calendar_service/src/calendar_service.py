@@ -20,6 +20,8 @@ active_flows = {}
 
 active_services = {}
 
+active_events = {}
+
 
 class CalendarServiceHandler(css.CalendarServiceServicer):
     def RequestAuth(self, request, context):
@@ -43,8 +45,11 @@ class CalendarServiceHandler(css.CalendarServiceServicer):
 
     def PushEvent(self, request, context):
         uid = request.user_id
-        start_time = request.time
-        dt = datetime.now()
+        meeting_id = request.meeting_id
+        our_id = f'{uid}:{meeting_id}'
+        if our_id in active_events:
+             active_services[uid].events().delete(calendarId='primary', eventId=active_events[our_id]).execute()
+        dt = datetime.fromtimestamp(request.time)
         start_time_s = dt.strftime('%Y-%m-%dT%H:%M:00')
         dt += timedelta(hours=1)
         end_time_s = dt.strftime('%Y-%m-%dT%H:%M:00')
@@ -56,6 +61,7 @@ class CalendarServiceHandler(css.CalendarServiceServicer):
             'end': {'dateTime': end_time_s, 'timeZone': 'GMT+3' }
         }
         event = active_services[uid].events().insert(calendarId='primary', body=event_obj).execute()
+        active_events[our_id] = event.get('id')
         return cs.EventAdded(added=True)
         
 

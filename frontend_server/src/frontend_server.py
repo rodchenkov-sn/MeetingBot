@@ -2,7 +2,7 @@ from concurrent import futures
 
 import grpc
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from typing import List
 
@@ -15,6 +15,18 @@ import backend_service_pb2_grpc as bsg
 channel = grpc.insecure_channel('localhost:50052')
 stub = bsg.BackendServiceStub(channel)
 
+import calendar_service_pb2 as cs
+import calendar_service_pb2_grpc as css
+
+channel_calendar = grpc.insecure_channel('localhost:50053')
+calendar_stub = css.CalendarServiceStub(channel_calendar)
+
+import file_repo_service_pb2 as fs
+import file_repo_service_pb2_grpc as fss
+
+channel_fs = grpc.insecure_channel('localhost:50054')
+fs_stub = fss.FileRepoServiceStub(channel_fs)
+
 from states import State, StateRepo
 from request_handler import RequestHandler
 from command_handler import CommandHandlers
@@ -24,18 +36,22 @@ stateRepo = StateRepo()
 
 
 def get_help_message(uid: int) -> um.ServerResponse:
-    create_team = '/create_team to add team\n'
-    invite_member = '/invite_member to invite user\n'
-    create_meeting = '/create_meeting to create meeting\n'
-    invite_to_meeting = '/invite_to_meeting to invite to meeting\n'
-    add_daughter_team = '/add_daughter_team to add daughter team\n'
-    edit_policy = '/edit_policy to edit team policy\n'
-    add_to_meeting = '/add_to_meeting - to add to meeting\n'
-    update_meeting_time = '/update_meeting_time - to update meeting time\n'
-    help_cmd = '\n/help to see this message'
-    return um.ServerResponse(user_id=uid,
-                             text=f'{create_team}{invite_member}{create_meeting}{invite_to_meeting}{add_daughter_team}{edit_policy}{add_to_meeting}{update_meeting_time}{help_cmd}')
-
+    msg = ''
+    msg += '/create_team to add team\n'
+    msg += '/invite_member to invite user\n'
+    msg += '/create_meeting to create meeting\n'
+    msg += '/invite_to_meeting to invite to meeting\n'
+    msg += '/add_daughter_team to add daughter team\n'
+    msg += '/edit_policy to edit team policy\n'
+    msg += '/add_to_meeting - to add to meeting\n'
+    msg += '/update_meeting_time - to update meeting time\n'
+    msg += '/get_agenda - to get your agenda\n'
+    msg += '/upload_file - to upload file\n'
+    msg += '/get_files -- to get available files\n'
+    msg += '/auth_gcal - to auth using google calendar\n'
+    msg += '\n/help to see this message'
+    return um.ServerResponse(user_id=uid, text=msg)
+                             
 
 class StartCmdHandler(RequestHandler):
     def handle_request(self, request) -> List[um.ServerResponse]:
@@ -101,12 +117,12 @@ class InviteReactionCmdHandler(RequestHandler):
         if text.startswith('/accept_invite'):
             stub.AddTeamMember(bs.Participating(object=group_id, subject=uid))
             return [
-                um.ServerResponse(user_id=uid, text='Wellcome to the club buddy'),
-                um.ServerResponse(user_id=owner_id, text=f'[[{uid}]] is now your slave')
+                um.ServerResponse(user_id=uid, text='Accepted!'),
+                um.ServerResponse(user_id=owner_id, text=f'[[{uid}]] accepted your invitation')
             ]
         else:
             return [
-                um.ServerResponse(user_id=uid, text='Oh fuck you!'),
+                um.ServerResponse(user_id=uid, text='Rejected!'),
                 um.ServerResponse(user_id=owner_id, text=f'[[{uid}]] rejected the invitation')
             ]
 
@@ -401,6 +417,113 @@ class UpdateMeetingTimeCmdHandler(RequestHandler):
             return response
 
 
+class GetAgendaCmdHandler(RequestHandler):
+    def handle_request(self, request) -> List[um.ServerResponse]:
+        uid = request.user_id
+        text = request.text
+        if text == '/get_agenda':
+            return [
+                um.ServerResponse(user_id=uid, text='/get_agenda_today -- today\n/get_agenda_tomorrow -- tomorrow')
+            ]
+        elif text == '/get_agenda_today':
+            start = datetime.now()
+            start = start.replace(hour=0, minute=0, second=0, microsecond=0)
+            end = start + timedelta(days=1)
+        else:
+            start = datetime.now()
+            start = start.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            end = start + timedelta(days=1)
+        msg = ''
+        for info in stub.GetUserMeetings(bs.EntityId(id=uid)):
+            meeting_info = stub.GetMeetingInfo(bs.EntityId(id=info.id))
+            if meeting_info.time > start.timestamp() and meeting_info.time < end.timestamp():
+                pretty_time = datetime.fromtimestamp(meeting_info.time).strftime('%H:%M')
+                msg += f'{meeting_info.desc} at {pretty_time}\n\n'
+        return [
+            um.ServerResponse(user_id=uid, text=msg)
+        ]
+
+
+class GCalAuthCmdHandler(RequestHandler):
+    def handle_request(self, request) -> List[um.ServerResponse]:
+        uid = request.user_id
+        text = request.text
+        state = stateRepo.get_state(uid)
+        if text == '/auth_gcal':
+            stateRepo.set_state(uid, State('authenticating_gcal', -1))
+            url = calendar_stub.RequestAuth(cs.AuthRequest(user_id=uid)).auth_url
+            return [
+                um.ServerResponse(user_id=uid, text=f'open {url}\nand respond with code')
+            ]
+        else:
+            stateRepo.clear_state(uid)
+            ok = calendar_stub.FinishAuth(cs.AuthCode(user_id=uid, auth_code=text)).ok
+            if ok:
+                return [
+                    um.ServerResponse(user_id=uid, text='Authenticated!')
+                ]
+            else:
+                return [
+                    um.ServerResponse(user_id=uid, text='Something went wrong. Try again later')
+                ]
+
+
+class UploadFileCmdHandler(RequestHandler):
+    def handle_request(self, request) -> List[um.ServerResponse]:
+        uid = request.user_id
+        text = request.text
+        state = stateRepo.get_state(uid)
+        if text == '/upload_file':
+            msg = ''
+            for info in stub.GetTeamsByUser(bs.EntityId(id=uid)):
+                msg += f'/upload_file{info.id} -- to {info.name}\n'
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
+        elif state is None:
+            group_id = int(text[12:])
+            stateRepo.set_state(uid, State('uploading_file', group_id))
+            return [
+                um.ServerResponse(user_id=uid, text='send some file')
+            ]
+        else:
+            group_id = state.argument
+            stateRepo.clear_state(uid)
+            file_id = fs_stub.UploadFile(
+                fs.FileInfo(
+                    name=request.file_name, 
+                    download_url=request.file_url
+                )
+            ).id
+            stub.AddFileToTeam(bs.Participating(object=group_id, subject=file_id))
+            return [
+                um.ServerResponse(user_id=uid, text='Uploaded!')
+            ]
+
+
+class GetUploadedFilesCmdHandler(RequestHandler):
+    def handle_request(self, request) -> List[um.ServerResponse]:
+        uid = request.user_id
+        text = request.text
+        state = stateRepo.get_state(uid)
+        if text == '/get_files':
+            msg = ''
+            for info in stub.GetTeamsByUser(bs.EntityId(id=uid)):
+                msg += f'/get_files{info.id} -- from {info.name}\n'
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
+        else:
+            group_id = int(text[10:])
+            msg = ''
+            for item in stub.GetAvailableFiles(bs.EntityId(id=group_id)):
+                file_info = fs_stub.DownloadFile(fs.FileId(id=item.id))
+                msg += f'{file_info.name} -- {file_info.download_url}\n'
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
+
+
 commandHandlers = CommandHandlers({
     '/start': StartCmdHandler(),
     '/help': StartCmdHandler(),
@@ -417,7 +540,13 @@ commandHandlers = CommandHandlers({
     '/add_daughter_team': AddDaughterTeamCmdHandler(),
     '/edit_policy': EditPolicyCmdHandler(),
     '/add_to_meeting': AddToMeetingCmdHandler(),
-    '/update_meeting_time': UpdateMeetingTimeCmdHandler()
+    '/update_meeting_time': UpdateMeetingTimeCmdHandler(),
+    '/get_agenda': GetAgendaCmdHandler(),
+    '/get_agenda_today': GetAgendaCmdHandler(),
+    '/get_agenda_tomorrow': GetAgendaCmdHandler(),
+    '/auth_gcal': GCalAuthCmdHandler(),
+    '/upload_file': UploadFileCmdHandler(),
+    '/get_files': GetUploadedFilesCmdHandler()
 })
 
 statesHandlers = StatesHandlers({
@@ -429,7 +558,9 @@ statesHandlers = StatesHandlers({
     'adding_daughter_team': AddDaughterTeamCmdHandler(),
     'editing_policy': EditPolicyCmdHandler(),
     'adding_to_meeting': AddToMeetingCmdHandler(),
-    'updating_meeting_time': UpdateMeetingTimeCmdHandler()
+    'updating_meeting_time': UpdateMeetingTimeCmdHandler(),
+    'authenticating_gcal': GCalAuthCmdHandler(),
+    'uploading_file': UploadFileCmdHandler()
 })
 
 

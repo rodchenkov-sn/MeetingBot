@@ -1,14 +1,10 @@
 syntax = "proto2";
 
-message FileInfo {
-    required string file_name = 1;
-    required string download_url = 2;
-}
-
 message UserMessage {
     required int64 user_id = 1;
     optional string text = 2;
-    optional FileInfo document = 3; 
+    optional string file_name = 3;
+    optional string file_url = 4;
 }
 
 message ServerResponse {

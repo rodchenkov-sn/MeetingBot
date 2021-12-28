@@ -46,6 +46,8 @@ def sendMessage(id: int, text: str):
 
 
 def mentions_to_ids(text: str) -> str:
+    if text is None:
+        return ''
     def m_to_i(s: Match[str]) -> str:
         id = username_id_redis.get(s.group())
         if id is None:
@@ -56,6 +58,8 @@ def mentions_to_ids(text: str) -> str:
 
 
 def ids_to_mentions(text: str) -> str:
+    if text is None:
+        return ''
     def i_to_m(id: Match[str]) -> str:
         id_s = id.group()
         id_s = id_s[2:len(id_s)-2]
@@ -75,11 +79,10 @@ def get_text_messages(message):
         id_username_redis.set(f'{message.from_user.id}', f'@{message.from_user.username}')
     user_message = um.UserMessage(user_id=message.from_user.id, text=mentions_to_ids(message.text))
     if message.content_type == 'document':
-        user_message.document.file_name = message.document.file_name
-        user_message.document.download_url = bot.get_file_url(message.document.file_id)
+        user_message.file_name = message.document.file_name
+        user_message.file_url = bot.get_file_url(message.document.file_id)
     responses = stub.HandleMessage(user_message)
     for response in responses:
-        print(response)
         if response.timestamp != 0 and response.event_id != 0:
             print(response.timestamp, response.event_id)
             job_id = f'{response.user_id}:{response.event_id}'

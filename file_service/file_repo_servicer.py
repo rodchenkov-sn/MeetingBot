@@ -8,7 +8,7 @@ import random
 
 HOST = '127.0.0.1:10800'
 
-FILE_FOLDER_HOST = "~/PycharmProjects/m"
+FILE_FOLDER_HOST = "."
 
 UPLOAD_DIRECTORY = f"{FILE_FOLDER_HOST}/project/api_uploaded_files"
 

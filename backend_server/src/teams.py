@@ -12,6 +12,7 @@ class Team:
         self.parent = -1
         self.children = []
         self.policy = TeamPolicy()
+        self.uploaded_files = []
 
     def add_member(self, _member_id: int) -> None:
         self.members.append(_member_id)
@@ -28,7 +29,8 @@ class Team:
             'need_approve_for_meeting_creation': self.policy.need_approve_for_meeting_creation,
             'propagate_policy': self.policy.propagate_policy,
             'parent_visible': self.policy.parent_visible,
-            'propagate_admin': self.policy.propagate_admin
+            'propagate_admin': self.policy.propagate_admin,
+            'uploaded_files': self.uploaded_files
         }
 
 
@@ -38,6 +40,7 @@ def team_from_mongo(item) -> Team:
     team.members = item['members']
     team.parent = item['parent']
     team.children = item['children']
+    team.uploaded_files = item['uploaded_files']
     policy = TeamPolicy()
     policy.need_approve_for_meeting_creation = item['need_approve_for_meeting_creation']
     policy.allow_users_to_create_meetings = item['allow_users_to_create_meetings']
@@ -51,7 +54,7 @@ def team_from_mongo(item) -> Team:
 class TeamsRepo:
     def __init__(self) -> None:
         from pymongo import MongoClient
-        client = MongoClient('')
+        client = MongoClient()
         self.__collection = client['MeetingBotDB']['Teams']
 
     def add_team(self, team: Team) -> int:
@@ -118,3 +121,28 @@ class TeamsRepo:
                 curr_team_id = curr_team.parent
             else:
                 curr_team_id = -1
+
+    def add_file_to_team(self, _team_id: int, _file_id: int):
+        self.__collection.update_one({'_id': _team_id}, {'$push': {'uploaded_files': _file_id}})
+
+    def get_available_files(self, _team_id: int) -> Iterable[int]:
+        curr_team = self.get_team(_team_id)
+        while curr_team.parent != -1 and curr_team.policy.parent_visible:
+            curr_team = self.get_team(curr_team.parent)
+        visible_files = set()
+        visited_teams = set()
+        teams_to_visit = [curr_team.id]
+        while len(teams_to_visit) != 0:
+            curr = teams_to_visit.pop()
+            if curr in visited_teams:
+                continue
+            visited_teams.add(curr)
+            team = self.get_team(curr)
+            visible_files.update(team.uploaded_files)
+            teams_to_visit += team.children
+        for fid in visible_files:
+            yield fid
+
+    def get_teams_by_user(self, _user_id: int) -> Iterable[Team]:
+        for item in self.__collection.find({'members': _user_id}):
+            yield team_from_mongo(item)
