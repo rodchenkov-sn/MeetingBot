@@ -167,7 +167,7 @@ class CreateMeetingCmdHandler(RequestHandler):
             msg = ''
             teams = stub.GetGroupsToCreateMeeting(bs.EntityId(id=uid))
             for team in teams:
-                msg += f'/create_meeting{team.id} -- in {team.name}\n'
+                msg += f'/create_meeting{team.id} -- {team.name}\n'
             return [
                 um.ServerResponse(user_id=uid, text=msg)
             ]
@@ -181,8 +181,9 @@ class CreateMeetingCmdHandler(RequestHandler):
                 time=-1
             )).id
             stateRepo.set_state(uid, State('setting_meeting_desc', meeting_id, _arg2=group_id))
+            create_meeting_enter_description = linesRepo.get_line('create_meeting_enter_description', uid)
             return [
-                um.ServerResponse(user_id=uid, text='Enter description:')
+                um.ServerResponse(user_id=uid, text=f'{create_meeting_enter_description}:')
             ]
         elif state.action == 'setting_meeting_desc':
             meeting_id = state.argument
@@ -194,8 +195,9 @@ class CreateMeetingCmdHandler(RequestHandler):
                 desc=text,
                 time=-1
             ))
+            create_meeting_enter_datetime = linesRepo.get_line('create_meeting_enter_datetime', uid)
             return [
-                um.ServerResponse(user_id=uid, text='Enter datetime (in format DD-MM-YYYY HH:MM):')
+                um.ServerResponse(user_id=uid, text=f'{create_meeting_enter_datetime}:')
             ]
         elif state.action == 'setting_meeting_time':
             meeting_id = state.argument
@@ -213,14 +215,20 @@ class CreateMeetingCmdHandler(RequestHandler):
             group_policy = stub.GetGroupPolicy(bs.EntityId(id=group_id))
             if uid == group_owner or not group_policy.needApproveForMeetingCreation:
                 stub.ApproveMeeting(bs.EntityId(id=meeting_id))
+                create_meeting_meeting_created = linesRepo.get_line('create_meeting_meeting_created', uid)
                 return [
-                    um.ServerResponse(user_id=uid, text=f'Meeting created!')
+                    um.ServerResponse(user_id=uid, text=f'{create_meeting_meeting_created}!')
                 ]
             else:
                 meeting_info = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
+                create_meeting_wait_approval = linesRepo.get_line('create_meeting_wait_approval', uid)
+                create_meeting_user = linesRepo.get_line('create_meeting_user', group_owner)
+                create_meeting_created_meeting = linesRepo.get_line('create_meeting_created_meeting', group_owner)
+                create_meeting_approve = linesRepo.get_line('create_meeting_approve', group_owner)
+                create_meeting_reject = linesRepo.get_line('create_meeting_reject', group_owner)
                 return [
-                    um.ServerResponse(user_id=uid, text='Meeting will be approved by the group owner. Just relax and wait'),
-                    um.ServerResponse(user_id=group_owner, text=f'User [[{uid}]] created meeting {meeting_info.desc}\n/approve_meeting{meeting_id} -- approve\n/reject_meeting{meeting_id} -- reject')
+                    um.ServerResponse(user_id=uid, text=f'{create_meeting_wait_approval}'),
+                    um.ServerResponse(user_id=group_owner, text=f'{create_meeting_user} [[{uid}]] {create_meeting_created_meeting} {meeting_info.desc}\n/approve_meeting{meeting_id} -- {create_meeting_approve}\n/reject_meeting{meeting_id} -- {create_meeting_reject}')
                 ]
 
 
