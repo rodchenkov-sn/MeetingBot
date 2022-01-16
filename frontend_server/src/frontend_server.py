@@ -143,14 +143,18 @@ class InviteReactionCmdHandler(RequestHandler):
         owner_id = stub.GetGroupOwner(bs.EntityId(id=group_id)).id
         if text.startswith('/accept_invite'):
             stub.AddTeamMember(bs.Participating(object=group_id, subject=uid))
+            invite_reaction_accepted = linesRepo.get_line('invite_reaction_accepted', uid)
+            invite_reaction_accepted_invitation = linesRepo.get_line('invite_reaction_accepted_invitation', owner_id)
             return [
-                um.ServerResponse(user_id=uid, text='Accepted!'),
-                um.ServerResponse(user_id=owner_id, text=f'[[{uid}]] accepted your invitation')
+                um.ServerResponse(user_id=uid, text=f'{invite_reaction_accepted}!'),
+                um.ServerResponse(user_id=owner_id, text=f'[[{uid}]] {invite_reaction_accepted_invitation}')
             ]
         else:
+            invite_reaction_rejected = linesRepo.get_line('invite_reaction_rejected', uid)
+            invite_reaction_rejected_invitation = linesRepo.get_line('invite_reaction_rejected_invitation', owner_id)
             return [
-                um.ServerResponse(user_id=uid, text='Rejected!'),
-                um.ServerResponse(user_id=owner_id, text=f'[[{uid}]] rejected the invitation')
+                um.ServerResponse(user_id=uid, text=f'{invite_reaction_rejected}!'),
+                um.ServerResponse(user_id=owner_id, text=f'[[{uid}]] {invite_reaction_rejected_invitation}')
             ]
 
 
