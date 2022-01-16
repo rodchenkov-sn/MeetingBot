@@ -310,15 +310,20 @@ class MeetingInviteReactionCmdHandler(RequestHandler):
         if text.startswith('/accept_meeting_invite'):
             stub.AddParticipant(bs.Participating(object=meeting_id, subject=uid))
             meeting_date = datetime.fromtimestamp(meeting_info.time)
+            meeting_invite_reaction_you_accepted = linesRepo.get_line('meeting_invite_reaction_you_accepted', uid)
+            meeting_invite_reaction_meeting_starts_at = linesRepo.get_line('meeting_invite_reaction_meeting_starts_at', uid)
+            meeting_invite_reaction_accepted = linesRepo.get_line('meeting_invite_reaction_accepted', creator_id)
             return [
-                um.ServerResponse(user_id=uid, text='You accepted meeting invitation'),
-                um.ServerResponse(user_id=uid, text=f'Meeting {meeting_info.desc} starts at {meeting_date}'),
-                um.ServerResponse(user_id=creator_id, text=f'[[{uid}]] accepted meeting invitation')
+                um.ServerResponse(user_id=uid, text=f'{meeting_invite_reaction_you_accepted}'),
+                um.ServerResponse(user_id=uid, text=f'{meeting_info.desc} {meeting_invite_reaction_meeting_starts_at} {meeting_date}'),
+                um.ServerResponse(user_id=creator_id, text=f'[[{uid}]] {meeting_invite_reaction_accepted}')
             ]
         else:
+            meeting_invite_reaction_you_rejected = linesRepo.get_line('meeting_invite_reaction_you_rejected', uid)
+            meeting_invite_reaction_rejected = linesRepo.get_line('meeting_invite_reaction_rejected', creator_id)
             return [
-                um.ServerResponse(user_id=uid, text='You rejected meeting invitation'),
-                um.ServerResponse(user_id=creator_id, text=f'[[{uid}]] rejected meeting invitation')
+                um.ServerResponse(user_id=uid, text=f'{meeting_invite_reaction_you_rejected}'),
+                um.ServerResponse(user_id=creator_id, text=f'[[{uid}]] {meeting_invite_reaction_rejected}')
             ]
 
 
