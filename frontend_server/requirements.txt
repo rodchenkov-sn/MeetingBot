@@ -1,2 +1,4 @@
 grpcio
 protobuf
+pymongo
+dnspython

@@ -34,22 +34,39 @@ from states_handler import StatesHandlers
 
 stateRepo = StateRepo()
 
+from lines import LinesRepo
+
+linesRepo = LinesRepo()
+
 
 def get_help_message(uid: int) -> um.ServerResponse:
     msg = ''
-    msg += '/create_team to add team\n'
-    msg += '/invite_member to invite user\n'
-    msg += '/create_meeting to create meeting\n'
-    msg += '/invite_to_meeting to invite to meeting\n'
-    msg += '/add_daughter_team to add daughter team\n'
-    msg += '/edit_policy to edit team policy\n'
-    msg += '/add_to_meeting - to add to meeting\n'
-    msg += '/update_meeting_time - to update meeting time\n'
-    msg += '/get_agenda - to get your agenda\n'
-    msg += '/upload_file - to upload file\n'
-    msg += '/get_files -- to get available files\n'
-    msg += '/auth_gcal - to auth using google calendar\n'
-    msg += '\n/help to see this message'
+    help_create_team = linesRepo.get_line('help_create_team', uid)
+    msg += f'/create_team - {help_create_team}\n'
+    help_invite_member = linesRepo.get_line('help_invite_member', uid)
+    msg += f'/invite_member - {help_invite_member}\n'
+    help_create_meeting = linesRepo.get_line('help_create_meeting', uid)
+    msg += f'/create_meeting - {help_create_meeting}\n'
+    help_invite_to_meeting = linesRepo.get_line('help_invite_to_meeting', uid)
+    msg += f'/invite_to_meeting - {help_invite_to_meeting}\n'
+    help_add_daughter_team = linesRepo.get_line('help_add_daughter_team', uid)
+    msg += f'/add_daughter_team - {help_add_daughter_team}\n'
+    help_edit_policy = linesRepo.get_line('help_edit_policy', uid)
+    msg += f'/edit_policy - {help_edit_policy}\n'
+    help_add_to_meeting = linesRepo.get_line('help_add_to_meeting', uid)
+    msg += f'/add_to_meeting - {help_add_to_meeting}\n'
+    help_update_meeting_time = linesRepo.get_line('help_update_meeting_time', uid)
+    msg += f'/update_meeting_time - {help_update_meeting_time}\n'
+    help_get_agenda = linesRepo.get_line('help_get_agenda', uid)
+    msg += f'/get_agenda - {help_get_agenda}\n'
+    help_upload_file = linesRepo.get_line('help_upload_file', uid)
+    msg += f'/upload_file - {help_upload_file}\n'
+    help_get_files = linesRepo.get_line('help_get_files', uid)
+    msg += f'/get_files - {help_get_files}\n'
+    help_auth_gcal = linesRepo.get_line('help_auth_gcal', uid)
+    msg += f'/auth_gcal - {help_auth_gcal}\n'
+    help_help = linesRepo.get_line('help_help', uid)
+    msg += f'\n/help - {help_help}'
     return um.ServerResponse(user_id=uid, text=msg)
                              
 
