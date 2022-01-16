@@ -106,23 +106,29 @@ class InviteUserCmdHandler(RequestHandler):
             msg = ''
             teams = stub.GetOwnedTeams(bs.EntityId(id=uid))
             for team in teams:
-                msg += f'/invite_member{team.id} -- to {team.name}\n'
+                msg += f'/invite_member{team.id} -- {team.name}\n'
             return [
                 um.ServerResponse(user_id=uid, text=msg)
             ]
         elif state is None:
             group_id = int(text[14:])
             stateRepo.set_state(uid, State('inviting_members', group_id))
+            invite_user_tag_users = linesRepo.get_line('invite_user_tag_users', uid)
             return [
-                um.ServerResponse(user_id=uid, text='Tag one or multiple users')
+                um.ServerResponse(user_id=uid, text=f'{invite_user_tag_users}')
             ]
         else:
             group_id = state.argument
             stateRepo.clear_state(uid)
             mentioned_users = map(lambda m: int(m[2:len(m) - 2]), re.findall(r'\[\[\d+\]\]', text))
-            invite_msg = f'You were invited to team {stub.GetTeamInfo(bs.EntityId(id=group_id)).name} by [[{uid}]]\n\n/accept_invite{group_id} -- accept\n/reject_invite{group_id} -- reject'
+            invite_user_you_were_invited = linesRepo.get_line('invite_user_you_were_invited', uid)
+            invite_user_by = linesRepo.get_line('invite_user_by', uid)
+            invite_user_accept = linesRepo.get_line('invite_user_accept', uid)
+            invite_user_reject = linesRepo.get_line('invite_user_reject', uid)
+            invite_msg = f'{invite_user_you_were_invited} {stub.GetTeamInfo(bs.EntityId(id=group_id)).name} {invite_user_by} [[{uid}]]\n\n/accept_invite{group_id} -- {invite_user_accept}\n/reject_invite{group_id} -- {invite_user_reject}'
             response = [um.ServerResponse(user_id=mid, text=invite_msg) for mid in mentioned_users]
-            response.append(um.ServerResponse(user_id=uid, text='Invitations were send'))
+            invite_user_invitations_send = linesRepo.get_line('invite_user_invitations_send', uid)
+            response.append(um.ServerResponse(user_id=uid, text=f'{invite_user_invitations_send}'))
             response.append(get_help_message(uid))
             return response
 
