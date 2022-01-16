@@ -433,15 +433,16 @@ class UpdateMeetingTimeCmdHandler(RequestHandler):
             msg = ''
             meetings = stub.GetOwnedMeetings(bs.EntityId(id=uid))
             for meeting in meetings:
-                msg += f'/update_meeting_time{meeting.id} -- of {meeting.name}\n'
+                msg += f'/update_meeting_time{meeting.id} -- {meeting.name}\n'
             return [
                 um.ServerResponse(user_id=uid, text=msg)
             ]
         elif state is None:
             meeting_id = int(text[20:])
             stateRepo.set_state(uid, State('updating_meeting_time', meeting_id))
+            update_meeting_time_enter_datetime = linesRepo.get_line('update_meeting_time_enter_datetime', uid)
             return [
-                um.ServerResponse(user_id=uid, text='Enter datetime (in format DD-MM-YYYY HH:MM):')
+                um.ServerResponse(user_id=uid, text=f'{update_meeting_time_enter_datetime}:')
             ]
         else:
             meeting_id = state.argument
@@ -457,7 +458,8 @@ class UpdateMeetingTimeCmdHandler(RequestHandler):
             response = []
             meeting_info = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
             meeting_date = datetime.fromtimestamp(meeting_info.time)
-            response.append(um.ServerResponse(user_id=uid, text=f'{meeting_info.desc} meeting time was updated to {meeting_date}'))
+            update_meeting_time_time_updated = linesRepo.get_line('update_meeting_time_time_updated', uid)
+            response.append(um.ServerResponse(user_id=uid, text=f'{meeting_info.desc} {update_meeting_time_time_updated} {meeting_date}'))
             response.append(get_help_message(uid))
             return response
 
