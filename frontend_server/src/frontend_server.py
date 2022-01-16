@@ -335,16 +335,18 @@ class AddDaughterTeamCmdHandler(RequestHandler):
         if text == '/add_daughter_team':
             msg = ''
             teams = stub.GetOwnedTeams(bs.EntityId(id=uid))
+            add_daughter_team_add_to = linesRepo.get_line('add_daughter_team_add_to', uid)
             for team in teams:
-                msg += f'/add_daughter_team{team.id} -- add daughter team to {team.name}\n'
+                msg += f'/add_daughter_team{team.id} -- {add_daughter_team_add_to} {team.name}\n'
             return [
                 um.ServerResponse(user_id=uid, text=msg)
             ]
         elif state is None:
             parent_team_id = int(text[18:])
             stateRepo.set_state(uid, State('adding_daughter_team', parent_team_id))
+            add_daughter_team_enter_id = linesRepo.get_line('add_daughter_team_enter_id', uid)
             return [
-                um.ServerResponse(user_id=uid, text='Enter daughter team id:')
+                um.ServerResponse(user_id=uid, text=f'{add_daughter_team_enter_id}:')
             ]
         else:
             parent_team_id = state.argument
@@ -353,7 +355,8 @@ class AddDaughterTeamCmdHandler(RequestHandler):
             stub.AddParentTeam(bs.Participating(object=parent_team_id, subject=daughter_team_id))
             parent_team_name = stub.GetTeamInfo(bs.EntityId(id=parent_team_id)).name
             daughter_team_name = stub.GetTeamInfo(bs.EntityId(id=daughter_team_id)).name
-            response = [um.ServerResponse(user_id=uid, text=f'{daughter_team_name} team is now a daughter of {parent_team_name} team')]
+            add_daughter_team_is_daughter = linesRepo.get_line('add_daughter_team_is_daughter', uid)
+            response = [um.ServerResponse(user_id=uid, text=f'{daughter_team_name} {add_daughter_team_is_daughter} {parent_team_name}')]
             response.append(get_help_message(uid))
             return response
 
