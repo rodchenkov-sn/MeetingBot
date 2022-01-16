@@ -240,16 +240,22 @@ class MeetingApproveCmdHandle(RequestHandler):
             meeting_id = int(text[16:])
             stub.ApproveMeeting(bs.EntityId(id=meeting_id))
             meeting_info = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
+            meeting_approve_approved = linesRepo.get_line('meeting_approve_approved', uid)
+            meeting_approve_meeting = linesRepo.get_line('meeting_approve_meeting', meeting_info.creator)
+            meeting_approve_was_approved = linesRepo.get_line('meeting_approve_was_approved', meeting_info.creator)
             return [
-                um.ServerResponse(user_id=uid, text='Approved!'),
-                um.ServerResponse(user_id=meeting_info.creator, text=f'Meeting {meeting_info.desc} was approved')
+                um.ServerResponse(user_id=uid, text=f'{meeting_approve_approved}!'),
+                um.ServerResponse(user_id=meeting_info.creator, text=f'{meeting_approve_meeting} {meeting_info.desc} {meeting_approve_was_approved}')
             ]
         else:
             meeting_id = int(text[15:])
             meeting_info = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
+            meeting_approve_rejected = linesRepo.get_line('meeting_approve_rejected', uid)
+            meeting_approve_meeting = linesRepo.get_line('meeting_approve_meeting', meeting_info.creator)
+            meeting_approve_was_rejected = linesRepo.get_line('meeting_approve_was_rejected', meeting_info.creator)
             return [
-                um.ServerResponse(user_id=uid, text='Rejected!'),
-                um.ServerResponse(user_id=meeting_info.creator, text=f'Meeting {meeting_info.desc} was rejected')
+                um.ServerResponse(user_id=uid, text=f'{meeting_approve_rejected}!'),
+                um.ServerResponse(user_id=meeting_info.creator, text=f'{meeting_approve_meeting} {meeting_info.desc} {meeting_approve_was_rejected}')
             ]
 
 
