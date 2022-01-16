@@ -369,8 +369,9 @@ class EditPolicyCmdHandler(RequestHandler):
         if text == '/edit_policy':
             msg = ''
             teams = stub.GetOwnedTeams(bs.EntityId(id=uid))
+            edit_policy_edit_of = linesRepo.get_line('edit_policy_edit_of', uid)
             for team in teams:
-                msg += f'/edit_policy{team.id} -- edit team {team.name}\'s policy\n'
+                msg += f'/edit_policy{team.id} -- {edit_policy_edit_of} {team.name}\n'
             return [
                 um.ServerResponse(user_id=uid, text=msg)
             ]
@@ -378,13 +379,19 @@ class EditPolicyCmdHandler(RequestHandler):
             team_id = int(text[12:])
             stateRepo.set_state(uid, State('editing_policy', team_id))
             group_policy = stub.GetGroupPolicy(bs.EntityId(id=team_id))
+            edit_policy_enter_one_zero = linesRepo.get_line('edit_policy_enter_one_zero', uid)
+            edit_policy_allow_meetings = linesRepo.get_line('edit_policy_allow_meetings', uid)
+            edit_policy_need_approve = linesRepo.get_line('edit_policy_need_approve', uid)
+            edit_policy_propagate_policy = linesRepo.get_line('edit_policy_propagate_policy', uid)
+            edit_policy_parent_visible = linesRepo.get_line('edit_policy_parent_visible', uid)
+            edit_policy_propagate_admin = linesRepo.get_line('edit_policy_propagate_admin', uid)
             return [
-                um.ServerResponse(user_id=uid, text='Enter 1 or 0 separated with spaces for each policy parameter:'),
-                um.ServerResponse(user_id=uid, text=f'\n1. allow users to create meetings: {group_policy.allowUsersToCreateMeetings}'),
-                um.ServerResponse(user_id=uid, text=f'\n2. need approve for meeting creation: {group_policy.needApproveForMeetingCreation}'),
-                um.ServerResponse(user_id=uid, text=f'\n3. propagate policy: {group_policy.propagatePolicy}'),
-                um.ServerResponse(user_id=uid, text=f'\n4. parent visible: {group_policy.parentVisible}'),
-                um.ServerResponse(user_id=uid, text=f'\n5. propagate admin: {group_policy.propagateAdmin}')
+                um.ServerResponse(user_id=uid, text=f'{edit_policy_enter_one_zero}:'),
+                um.ServerResponse(user_id=uid, text=f'\n1. {edit_policy_allow_meetings}: {group_policy.allowUsersToCreateMeetings}'),
+                um.ServerResponse(user_id=uid, text=f'\n2. {edit_policy_need_approve}: {group_policy.needApproveForMeetingCreation}'),
+                um.ServerResponse(user_id=uid, text=f'\n3. {edit_policy_propagate_policy}: {group_policy.propagatePolicy}'),
+                um.ServerResponse(user_id=uid, text=f'\n4. {edit_policy_parent_visible}: {group_policy.parentVisible}'),
+                um.ServerResponse(user_id=uid, text=f'\n5. {edit_policy_propagate_admin}: {group_policy.propagateAdmin}')
             ]
         else:
             team_id = state.argument
@@ -397,8 +404,9 @@ class EditPolicyCmdHandler(RequestHandler):
                 propagatePolicy=bool(int(policy_parameters[2])),
                 parentVisible=bool(int(policy_parameters[3])),
                 propagateAdmin=bool(int(policy_parameters[4]))))
+            edit_policy_policy_updated = linesRepo.get_line('edit_policy_policy_updated', uid)
             return [
-                um.ServerResponse(user_id=uid, text=f'Policy updated'),
+                um.ServerResponse(user_id=uid, text=f'{edit_policy_policy_updated}'),
                 get_help_message(uid)
             ]
 
