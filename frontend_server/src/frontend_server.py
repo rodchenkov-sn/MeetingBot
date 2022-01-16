@@ -467,8 +467,10 @@ class GetAgendaCmdHandler(RequestHandler):
         uid = request.user_id
         text = request.text
         if text == '/get_agenda':
+            get_agenda_today = linesRepo.get_line('get_agenda_today', uid)
+            get_agenda_tomorrow = linesRepo.get_line('get_agenda_tomorrow', uid)
             return [
-                um.ServerResponse(user_id=uid, text='/get_agenda_today -- today\n/get_agenda_tomorrow -- tomorrow')
+                um.ServerResponse(user_id=uid, text=f'/get_agenda_today -- {get_agenda_today}\n/get_agenda_tomorrow -- {get_agenda_tomorrow}')
             ]
         elif text == '/get_agenda_today':
             start = datetime.now()
@@ -483,7 +485,8 @@ class GetAgendaCmdHandler(RequestHandler):
             meeting_info = stub.GetMeetingInfo(bs.EntityId(id=info.id))
             if meeting_info.time > start.timestamp() and meeting_info.time < end.timestamp():
                 pretty_time = datetime.fromtimestamp(meeting_info.time).strftime('%H:%M')
-                msg += f'{meeting_info.desc} at {pretty_time}\n\n'
+                get_agenda_at = linesRepo.get_line('get_agenda_at', uid)
+                msg += f'{meeting_info.desc} {get_agenda_at} {pretty_time}\n\n'
         return [
             um.ServerResponse(user_id=uid, text=msg)
         ]
