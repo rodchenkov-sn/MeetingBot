@@ -521,15 +521,16 @@ class UploadFileCmdHandler(RequestHandler):
         if text == '/upload_file':
             msg = ''
             for info in stub.GetTeamsByUser(bs.EntityId(id=uid)):
-                msg += f'/upload_file{info.id} -- to {info.name}\n'
+                msg += f'/upload_file{info.id} -- {info.name}\n'
             return [
                 um.ServerResponse(user_id=uid, text=msg)
             ]
         elif state is None:
             group_id = int(text[12:])
             stateRepo.set_state(uid, State('uploading_file', group_id))
+            upload_file_send_file = linesRepo.get_line('upload_file_send_file', uid)
             return [
-                um.ServerResponse(user_id=uid, text='send some file')
+                um.ServerResponse(user_id=uid, text=f'{upload_file_send_file}')
             ]
         else:
             group_id = state.argument
@@ -541,8 +542,9 @@ class UploadFileCmdHandler(RequestHandler):
                 )
             ).id
             stub.AddFileToTeam(bs.Participating(object=group_id, subject=file_id))
+            upload_file_uploaded = linesRepo.get_line('upload_file_uploaded', uid)
             return [
-                um.ServerResponse(user_id=uid, text='Uploaded!')
+                um.ServerResponse(user_id=uid, text=f'{upload_file_uploaded}!')
             ]
 
 
@@ -554,7 +556,7 @@ class GetUploadedFilesCmdHandler(RequestHandler):
         if text == '/get_files':
             msg = ''
             for info in stub.GetTeamsByUser(bs.EntityId(id=uid)):
-                msg += f'/get_files{info.id} -- from {info.name}\n'
+                msg += f'/get_files{info.id} -- {info.name}\n'
             return [
                 um.ServerResponse(user_id=uid, text=msg)
             ]
