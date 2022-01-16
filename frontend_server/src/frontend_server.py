@@ -121,12 +121,14 @@ class InviteUserCmdHandler(RequestHandler):
             group_id = state.argument
             stateRepo.clear_state(uid)
             mentioned_users = map(lambda m: int(m[2:len(m) - 2]), re.findall(r'\[\[\d+\]\]', text))
-            invite_user_you_were_invited = linesRepo.get_line('invite_user_you_were_invited', uid)
-            invite_user_by = linesRepo.get_line('invite_user_by', uid)
-            invite_user_accept = linesRepo.get_line('invite_user_accept', uid)
-            invite_user_reject = linesRepo.get_line('invite_user_reject', uid)
-            invite_msg = f'{invite_user_you_were_invited} {stub.GetTeamInfo(bs.EntityId(id=group_id)).name} {invite_user_by} [[{uid}]]\n\n/accept_invite{group_id} -- {invite_user_accept}\n/reject_invite{group_id} -- {invite_user_reject}'
-            response = [um.ServerResponse(user_id=mid, text=invite_msg) for mid in mentioned_users]
+            response = []
+            for mid in mentioned_users:
+                invite_user_you_were_invited = linesRepo.get_line('invite_user_you_were_invited', mid)
+                invite_user_by = linesRepo.get_line('invite_user_by', mid)
+                invite_user_accept = linesRepo.get_line('invite_user_accept', mid)
+                invite_user_reject = linesRepo.get_line('invite_user_reject', mid)
+                invite_msg = f'{invite_user_you_were_invited} {stub.GetTeamInfo(bs.EntityId(id=group_id)).name} {invite_user_by} [[{uid}]]\n\n/accept_invite{group_id} -- {invite_user_accept}\n/reject_invite{group_id} -- {invite_user_reject}'
+                response.append(um.ServerResponse(user_id=mid, text=invite_msg))
             invite_user_invitations_send = linesRepo.get_line('invite_user_invitations_send', uid)
             response.append(um.ServerResponse(user_id=uid, text=f'{invite_user_invitations_send}'))
             response.append(get_help_message(uid))
