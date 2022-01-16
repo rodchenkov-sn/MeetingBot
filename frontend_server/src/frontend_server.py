@@ -85,13 +85,15 @@ class CreateTeamCmdHandler(RequestHandler):
         if state is not None and state.action == 'creating_team':
             stateRepo.clear_state(uid)
             stub.CreateTeam(bs.CreateTeamMsg(name=text, owner=uid))
+            create_team_team_created = linesRepo.get_line('create_team_team_created', uid)
             return [
-                um.ServerResponse(user_id=uid, text=f'team {text} created!'),
+                um.ServerResponse(user_id=uid, text=f'{text} {create_team_team_created}!'),
                 get_help_message(uid)
             ]
         stateRepo.set_state(uid, State('creating_team', -1))
+        create_team_enter_name = linesRepo.get_line('create_team_enter_name', uid)
         return [
-            um.ServerResponse(user_id=uid, text='Enter name:')
+            um.ServerResponse(user_id=uid, text=f'{create_team_enter_name}:')
         ]
 
 
