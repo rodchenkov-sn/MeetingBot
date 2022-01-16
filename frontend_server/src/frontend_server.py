@@ -497,19 +497,23 @@ class GCalAuthCmdHandler(RequestHandler):
         if text == '/auth_gcal':
             stateRepo.set_state(uid, State('authenticating_gcal', -1))
             url = calendar_stub.RequestAuth(cs.AuthRequest(user_id=uid)).auth_url
+            gcal_auth_open = linesRepo.get_line('gcal_auth_open', uid)
+            gcal_auth_respond_code = linesRepo.get_line('gcal_auth_respond_code', uid)
             return [
-                um.ServerResponse(user_id=uid, text=f'open {url}\nand respond with code')
+                um.ServerResponse(user_id=uid, text=f'{gcal_auth_open} {url}\n{gcal_auth_respond_code}')
             ]
         else:
             stateRepo.clear_state(uid)
             ok = calendar_stub.FinishAuth(cs.AuthCode(user_id=uid, auth_code=text)).ok
             if ok:
+                gcal_auth_authenticated = linesRepo.get_line('gcal_auth_authenticated', uid)
                 return [
-                    um.ServerResponse(user_id=uid, text='Authenticated!')
+                    um.ServerResponse(user_id=uid, text=f'{gcal_auth_authenticated}!')
                 ]
             else:
+                gcal_auth_went_wrong = linesRepo.get_line('gcal_auth_went_wrong', uid)
                 return [
-                    um.ServerResponse(user_id=uid, text='Something went wrong. Try again later')
+                    um.ServerResponse(user_id=uid, text=f'{gcal_auth_went_wrong}')
                 ]
 
 
