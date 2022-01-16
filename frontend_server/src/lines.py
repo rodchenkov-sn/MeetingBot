@@ -4,7 +4,7 @@ from typing import Optional
 class LinesRepo:
     def __init__(self) -> None:
         from pymongo import MongoClient
-        cluster = "mongodb+srv://artur:artur@cluster0.jh71e.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
+        cluster = ""
         client = MongoClient(cluster)
         db = client['localization']
         self.__languages = db['languages']
