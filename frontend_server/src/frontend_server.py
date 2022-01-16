@@ -395,15 +395,16 @@ class AddToMeetingCmdHandler(RequestHandler):
             msg = ''
             meetings = stub.GetOwnedMeetings(bs.EntityId(id=uid))
             for meeting in meetings:
-                msg += f'/add_to_meeting{meeting.id} -- to {meeting.name}\n'
+                msg += f'/add_to_meeting{meeting.id} -- {meeting.name}\n'
             return [
                 um.ServerResponse(user_id=uid, text=msg)
             ]
         elif state is None:
             meeting_id = int(text[15:])
             stateRepo.set_state(uid, State('adding_to_meeting', meeting_id))
+            add_to_meeting_tag = linesRepo.get_line('add_to_meeting_tag', uid)
             return [
-                um.ServerResponse(user_id=uid, text='Tag one or multiple users')
+                um.ServerResponse(user_id=uid, text=f'{add_to_meeting_tag}')
             ]
         else:
             meeting_id = state.argument
@@ -417,9 +418,12 @@ class AddToMeetingCmdHandler(RequestHandler):
             for mu in mentioned_users:
                 if mu in invitable_members:
                     stub.AddParticipant(bs.Participating(object=meeting_id, subject=mu))
-                    response.append(um.ServerResponse(user_id=mu, text=f'You were added to {meeting_info.desc} meeting'))
-                    response.append(um.ServerResponse(user_id=uid, text=f'Meeting {meeting_info.desc} starts at {meeting_date}'))
-            response.append(um.ServerResponse(user_id=uid, text='Users were added to meeting'))
+                    add_to_meeting_you_were_added = linesRepo.get_line('add_to_meeting_you_were_added', mu)
+                    response.append(um.ServerResponse(user_id=mu, text=f'{add_to_meeting_you_were_added} {meeting_info.desc}'))
+                    add_to_meeting_meeting_starts_at = linesRepo.get_line('add_to_meeting_meeting_starts_at', mu)
+                    response.append(um.ServerResponse(user_id=mu, text=f'{meeting_info.desc} {add_to_meeting_meeting_starts_at} {meeting_date}'))
+            add_to_meeting_users_were_added = linesRepo.get_line('add_to_meeting_users_were_added', uid)
+            response.append(um.ServerResponse(user_id=uid, text=f'{add_to_meeting_users_were_added}'))
             response.append(get_help_message(uid))
             return response
 
