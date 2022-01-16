@@ -268,15 +268,16 @@ class InviteToMeetingCmdHandler(RequestHandler):
             msg = ''
             meetings = stub.GetOwnedMeetings(bs.EntityId(id=uid))
             for meeting in meetings:
-                msg += f'/invite_to_meeting{meeting.id} -- to {meeting.name}\n'
+                msg += f'/invite_to_meeting{meeting.id} -- {meeting.name}\n'
             return [
                 um.ServerResponse(user_id=uid, text=msg)
             ]
         elif state is None:
             meeting_id = int(text[18:])
             stateRepo.set_state(uid, State('inviting_to_meeting', meeting_id))
+            inviting_to_meeting_tag = linesRepo.get_line('inviting_to_meeting_tag', uid)
             return [
-                um.ServerResponse(user_id=uid, text='Tag one or multiple users')
+                um.ServerResponse(user_id=uid, text=f'{inviting_to_meeting_tag}')
             ]
         else:
             meeting_id = state.argument
@@ -284,9 +285,17 @@ class InviteToMeetingCmdHandler(RequestHandler):
             mentioned_users = map(lambda m: int(m[2:len(m) - 2]), re.findall(r'\[\[\d+\]\]', text))
             team_id = stub.GetMeetingInfo(bs.EntityId(id=meeting_id)).team
             invitable_members = map(lambda x: x.id, stub.GetInvitableMembers(bs.EntityId(id=team_id)))
-            invite_msg = f'You were invited to meeting {stub.GetMeetingInfo(bs.EntityId(id=meeting_id)).desc} by [[{uid}]]\n\n/accept_meeting_invite{meeting_id} -- accept\n/reject_meeting_invite{meeting_id} -- reject'
-            response = [um.ServerResponse(user_id=mu, text=invite_msg) for mu in mentioned_users if mu in invitable_members]
-            response.append(um.ServerResponse(user_id=uid, text='Invitations to meeting were send'))
+            response = []
+            for mu in mentioned_users:
+                if mu in invitable_members:
+                    inviting_to_meeting_you_were_invited = linesRepo.get_line('inviting_to_meeting_you_were_invited', mu)
+                    inviting_to_meeting_by = linesRepo.get_line('inviting_to_meeting_by', mu)
+                    inviting_to_meeting_accept = linesRepo.get_line('inviting_to_meeting_accept', mu)
+                    inviting_to_meeting_reject = linesRepo.get_line('inviting_to_meeting_reject', mu)
+                    invite_msg = f'{inviting_to_meeting_you_were_invited} {stub.GetMeetingInfo(bs.EntityId(id=meeting_id)).desc} {inviting_to_meeting_by} [[{uid}]]\n\n/accept_meeting_invite{meeting_id} -- {inviting_to_meeting_accept}\n/reject_meeting_invite{meeting_id} -- {inviting_to_meeting_reject}'
+                    response.append(um.ServerResponse(user_id=mu, text=invite_msg))
+            inviting_to_meeting_invitations_send = linesRepo.get_line('inviting_to_meeting_invitations_send', uid)
+            response.append(um.ServerResponse(user_id=uid, text=f'{inviting_to_meeting_invitations_send}'))
             response.append(get_help_message(uid))
             return response
 
