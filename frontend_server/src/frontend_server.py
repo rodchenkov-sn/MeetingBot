@@ -65,6 +65,8 @@ def get_help_message(uid: int) -> um.ServerResponse:
     msg += f'/get_files - {help_get_files}\n'
     help_auth_gcal = linesRepo.get_line('help_auth_gcal', uid)
     msg += f'/auth_gcal - {help_auth_gcal}\n'
+    help_change_language = linesRepo.get_line('help_change_language', uid)
+    msg += f'/change_language - {help_change_language}\n'
     help_help = linesRepo.get_line('help_help', uid)
     msg += f'\n/help - {help_help}'
     return um.ServerResponse(user_id=uid, text=msg)
@@ -609,6 +611,32 @@ class GetUploadedFilesCmdHandler(RequestHandler):
             ]
 
 
+class ChangeLanguageCmdHandler(RequestHandler):
+    def handle_request(self, request) -> List[um.ServerResponse]:
+        uid = request.user_id
+        text = request.text
+        state = stateRepo.get_state(uid)
+        if text == '/change_language':
+            stateRepo.set_state(uid, State('changing_language', -1))
+            msg = ''
+            for language in linesRepo.get_all_languages():
+                language_name = linesRepo.get_line(language, uid)
+                msg += f'/change_language__{language} -- {language_name}\n'
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
+        elif state.action == 'changing_language':
+            stateRepo.clear_state(uid)
+            language = str(text[18:])
+            linesRepo.update_user_language(uid, language)
+            change_language_changed = linesRepo.get_line('change_language_changed', uid)
+            msg = f'{change_language_changed}'
+            return [
+                um.ServerResponse(user_id=uid, text=msg),
+                get_help_message(uid)
+            ]
+
+
 commandHandlers = CommandHandlers({
     '/start': StartCmdHandler(),
     '/help': StartCmdHandler(),
@@ -631,7 +659,8 @@ commandHandlers = CommandHandlers({
     '/get_agenda_tomorrow': GetAgendaCmdHandler(),
     '/auth_gcal': GCalAuthCmdHandler(),
     '/upload_file': UploadFileCmdHandler(),
-    '/get_files': GetUploadedFilesCmdHandler()
+    '/get_files': GetUploadedFilesCmdHandler(),
+    '/change_language': ChangeLanguageCmdHandler(),
 })
 
 statesHandlers = StatesHandlers({
@@ -645,7 +674,8 @@ statesHandlers = StatesHandlers({
     'adding_to_meeting': AddToMeetingCmdHandler(),
     'updating_meeting_time': UpdateMeetingTimeCmdHandler(),
     'authenticating_gcal': GCalAuthCmdHandler(),
-    'uploading_file': UploadFileCmdHandler()
+    'uploading_file': UploadFileCmdHandler(),
+    'changing_language': ChangeLanguageCmdHandler()
 })
 
 
