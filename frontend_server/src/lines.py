@@ -8,7 +8,7 @@ class LinesRepo:
     def __init__(self) -> None:
         with open('config.yml', 'r') as config_file:
             config = yaml.safe_load(config_file)
-        cluster = config['mongodb_cluster']
+        cluster = config['lines_repo_url']
         client = MongoClient(cluster)
         db = client['localization']
         self.__users = db['users']

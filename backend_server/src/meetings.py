@@ -1,3 +1,5 @@
+import yaml
+
 from typing import Iterable
 
 import backend_service_pb2 as bs
@@ -60,8 +62,10 @@ def meeting_from_mongo(info) -> Meeting:
 
 class MeetingsRepo:
     def __init__(self):
+        with open('config.yml', 'r') as config_file:
+            config = yaml.safe_load(config_file)
         from pymongo import MongoClient
-        client = MongoClient()
+        client = MongoClient(config['meetings_repo_url'])
         self.__collection = client['MeetingBotDB']['Meetings']
 
     def add_meeting(self, meeting: Meeting):
