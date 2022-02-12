@@ -1,3 +1,5 @@
+import yaml
+
 from typing import Iterable
 
 from team_policy import TeamPolicy
@@ -53,8 +55,10 @@ def team_from_mongo(item) -> Team:
 
 class TeamsRepo:
     def __init__(self) -> None:
+        with open('config.yml', 'r') as config_file:
+            config = yaml.safe_load(config_file)
         from pymongo import MongoClient
-        client = MongoClient()
+        client = MongoClient(config['teams_repo_url'])
         self.__collection = client['MeetingBotDB']['Teams']
 
     def add_team(self, team: Team) -> int:
