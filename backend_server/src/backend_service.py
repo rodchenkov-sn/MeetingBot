@@ -162,6 +162,6 @@ def serve():
     random.seed()
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     bsg.add_BackendServiceServicer_to_server(BackendServiceHandler(), server)
-    server.add_insecure_port('[::]:50052')
+    server.add_insecure_port('[::]:50062')
     server.start()
     server.wait_for_termination()
