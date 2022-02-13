@@ -20,7 +20,7 @@ meetingsRepo = MeetingsRepo()
 import calendar_service_pb2 as cs
 import calendar_service_pb2_grpc as css
 
-channel_calendar = grpc.insecure_channel('localhost:50053')
+channel_calendar = grpc.insecure_channel('calendar-service:50053')
 calendar_stub = css.CalendarServiceStub(channel_calendar)
 
 

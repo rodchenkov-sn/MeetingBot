@@ -5,8 +5,8 @@ WORKDIR /app
 
 RUN python -m pip install --upgrade pip
 
-COPY tg_api_adapter/requirements.txt /app/requirements.txt
+COPY backend_server/requirements.txt /app/requirements.txt
 RUN pip install -r requirements.txt
 
-COPY tg_api_adapter/src/ /app
+COPY backend_server/src/ /app
 COPY config.yml /app
