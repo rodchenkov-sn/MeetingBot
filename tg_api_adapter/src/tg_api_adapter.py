@@ -1,5 +1,3 @@
-# docker run -d -p 6379:6379 redis
-
 from typing import Match
 import grpc
 import telebot
@@ -21,11 +19,11 @@ with open('config.yml', 'r') as config_file:
 
 
 bot = telebot.TeleBot(config['tg_token'])
-channel = grpc.insecure_channel(config['frontend_server_url'])
+channel = grpc.insecure_channel('frontend-service:50051')
 stub = ums.UserMessageHandlerStub(channel)
 
 jobstores = {
-    'default': RedisJobStore(jobs_key='dispatched_trips_jobs', run_times_key='dispatched_trips_running', host='localhost', port=6379)
+    'default': RedisJobStore(jobs_key='dispatched_trips_jobs', run_times_key='dispatched_trips_running', host='redis-service', port=6379)
 }
 executors = {
     'default': ThreadPoolExecutor(100),
@@ -34,8 +32,8 @@ executors = {
 scheduler = BackgroundScheduler(jobstores=jobstores, executors=executors)
 scheduler.start()
 
-username_id_redis = redis.Redis('localhost', 6379, 1)
-id_username_redis = redis.Redis('localhost', 6379, 2)
+username_id_redis = redis.Redis(host='redis-service', port=6379, db=1)
+id_username_redis = redis.Redis(host='redis-service', port=6379, db=2)
 
 assert(username_id_redis.ping())
 assert(id_username_redis.ping())

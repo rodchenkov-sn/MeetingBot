@@ -1,0 +1,62 @@
+version: "3"
+
+services:
+
+  calendar-service:
+    networks:
+      - internal-net
+    build:
+      context: ./
+      dockerfile: calendar_service/Dockerfile
+    command: python startup.py
+    ports: 
+      - 50053:50053
+
+  backend-service:
+    networks:
+      - internal-net
+    build:
+      context: ./
+      dockerfile: backend_server/Dockerfile
+    command: python startup.py
+    ports:
+      - 50052:50052
+    depends_on:
+      - calendar-service
+
+  frontend-service:
+    networks:
+      - internal-net
+    build:
+      context: ./
+      dockerfile: frontend_server/Dockerfile
+    command: python startup.py
+    ports:
+      - 50051:50051
+    depends_on:
+      - backend-service
+
+  redis-service:
+    image: redis
+    ports:
+      - 127.0.0.1:6379:6379
+    command: redis-server
+    networks:
+      - internal-net
+  
+  tg-api-adapter:
+    build:
+      context: ./
+      dockerfile: tg_api_adapter/Dockerfile
+    command: python startup.py
+    depends_on:
+      - frontend-service
+      - redis-service
+    networks:
+      - internal-net
+    restart: on-failure
+
+
+networks:
+  internal-net:
+    driver: bridge

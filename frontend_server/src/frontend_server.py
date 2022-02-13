@@ -12,13 +12,13 @@ import user_message_pb2_grpc as umg
 import backend_service_pb2 as bs
 import backend_service_pb2_grpc as bsg
 
-channel = grpc.insecure_channel('localhost:50052')
+channel = grpc.insecure_channel('backend-service:50052')
 stub = bsg.BackendServiceStub(channel)
 
 import calendar_service_pb2 as cs
 import calendar_service_pb2_grpc as css
 
-channel_calendar = grpc.insecure_channel('localhost:50053')
+channel_calendar = grpc.insecure_channel('calendar-service:50053')
 calendar_stub = css.CalendarServiceStub(channel_calendar)
 
 import file_repo_service_pb2 as fs
