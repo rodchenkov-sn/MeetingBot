@@ -12,7 +12,7 @@ import user_message_pb2_grpc as umg
 import backend_service_pb2 as bs
 import backend_service_pb2_grpc as bsg
 
-channel = grpc.insecure_channel('backend-service:50052')
+channel = grpc.insecure_channel('nginx-service:50052')
 stub = bsg.BackendServiceStub(channel)
 
 import calendar_service_pb2 as cs
