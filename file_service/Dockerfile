@@ -1,7 +1,11 @@
+FROM python:latest
 
-# syntax=docker/dockerfile:1
+RUN mkdir -p /app
+WORKDIR /app
 
-FROM python:3.8-slim-buster
+RUN python -m pip install --upgrade pip
 
+COPY file_service/requirements.txt /app/requirements.txt
+RUN pip install -r requirements.txt
 
-CMD [ "python3", "-m" , "flask", "run"]
+COPY file_service/ /app

@@ -17,11 +17,7 @@ class FileRepoServicer(file_repo_service_pb2_grpc.FileRepoServiceServicer):
     def UploadFile(self, request, context):
         url = request.download_url
         r = requests.get(url, allow_redirects=True)
-        open(os.path.join(UPLOAD_DIRECTORY, request.name), 'wb').write(r.content)
-        idnew = random.getrandbits(32)
-        bd.Bd().save(f"{HOST}/files/{request.name}", idnew, request.name)
-        return file_repo_service_pb2.FileId(id=idnew)
+        request.post('https://meetingbot-fileservice.herokuapp.com/files', data = r)
 
     def DownloadFile(self, request, context):
-        url, name = bd.Bd().get(request.id)
-        return file_repo_service_pb2.FileInfo(download_url=url, name=name)
+                            return requests.get(f"https://meetingbot-fileservice.herokuapp.com/file/{request.id}")
