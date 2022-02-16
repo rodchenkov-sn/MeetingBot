@@ -1,0 +1,76 @@
+syntax = "proto2";
+
+message SimpleResponse {
+    required bool ok = 1;
+}
+
+message EntityId {
+    required int64 id = 1;
+}
+
+message CreateTeamMsg {
+    required string name = 1;
+    required int64 owner = 2;
+}
+
+message NamedInfo {
+    required int64 id = 1;
+    required string name = 2;
+}
+
+message MeetingInfo {
+    required int64 id = 1;
+    required int64 creator = 2;
+    required int64 team = 3;
+    required string desc = 4;
+    required int64 time = 5;
+}
+
+message Participating { // the subject is 'part' of the object
+    required int64 object = 1;
+    required int64 subject = 2;
+}
+
+message TeamPolicy {
+    required int64 groupId = 1;
+    required bool allowUsersToCreateMeetings = 2;
+    required bool needApproveForMeetingCreation = 3;
+    required bool propagatePolicy = 4;
+    required bool parentVisible = 5;
+    required bool propagateAdmin = 6;
+}
+
+service BackendService {
+    rpc CreateTeam (CreateTeamMsg) returns (EntityId);
+    rpc GetOwnedTeams (EntityId) returns (stream NamedInfo);
+    rpc GetTeamInfo (EntityId) returns (NamedInfo);
+    rpc AddTeamMember (Participating) returns (SimpleResponse);
+    rpc GetTeamMembers (EntityId) returns (stream EntityId);
+    rpc GetTeamsByUser (EntityId) returns (stream NamedInfo);
+
+    rpc CreateMeeting (MeetingInfo) returns (EntityId);
+    rpc UpdateMeetingInfo (MeetingInfo) returns (SimpleResponse);
+    rpc GetOwnedMeetings (EntityId) returns (stream NamedInfo);
+    rpc AddParticipant (Participating) returns (SimpleResponse);
+    rpc GetMeetingInfo (EntityId) returns (MeetingInfo);
+    rpc ApproveMeeting (EntityId) returns (SimpleResponse);
+    rpc GetGroupMeetings (EntityId) returns (stream NamedInfo);
+
+    rpc GetUserMeetings (EntityId) returns (stream NamedInfo);
+    rpc GetMeetingMembers (EntityId) returns (stream EntityId);
+
+    rpc GetGroupOwner (EntityId) returns (EntityId);
+    rpc GetGroupPolicy (EntityId) returns (TeamPolicy);
+    rpc SetGroupPolicy (TeamPolicy) returns (SimpleResponse);
+
+    rpc GetGroupsToCreateMeeting (EntityId) returns (stream NamedInfo);
+
+    rpc AddParentTeam (Participating) returns (SimpleResponse);
+
+    rpc GetInvitableMembers (EntityId) returns (stream EntityId);
+
+    rpc GetGroupOwners (EntityId) returns (stream EntityId);
+
+    rpc AddFileToTeam (Participating) returns (SimpleResponse);
+    rpc GetAvailableFiles (EntityId) returns (stream EntityId);
+}

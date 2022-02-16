@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+message FileInfo {
+    required string name = 1;
+    required string download_url = 2;
+}
+
+message FileId {
+    required int64 id = 1;
+}
+
+service FileRepoService {
+    rpc UploadFile (FileInfo) returns (FileId);
+    rpc DownloadFile (FileId) returns (FileInfo);
+}

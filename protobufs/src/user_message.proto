@@ -1,0 +1,19 @@
+syntax = "proto2";
+
+message UserMessage {
+    required int64 user_id = 1;
+    optional string text = 2;
+    optional string file_name = 3;
+    optional string file_url = 4;
+}
+
+message ServerResponse {
+    required int64 user_id = 1;
+    required string text = 2;
+    optional int64 event_id = 3;  // expected for scheduled messages
+    optional int64 timestamp = 4; // in secs
+}
+
+service UserMessageHandler {
+    rpc HandleMessage (UserMessage) returns (stream ServerResponse);
+}
