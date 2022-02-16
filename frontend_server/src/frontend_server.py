@@ -1,4 +1,6 @@
 from concurrent import futures
+from curses.ascii import ctrl
+from os import stat
 
 import grpc
 import re
@@ -50,7 +52,7 @@ def get_help_message(uid: int) -> um.ServerResponse:
     help_invite_to_meeting = linesRepo.get_line('help_invite_to_meeting', uid)
     msg += f'/invite_to_meeting - {help_invite_to_meeting}\n'
     help_add_daughter_team = linesRepo.get_line('help_add_daughter_team', uid)
-    msg += f'/add_daughter_team - {help_add_daughter_team}\n'
+    msg += f'/add_child_team - {help_add_daughter_team}\n'
     help_edit_policy = linesRepo.get_line('help_edit_policy', uid)
     msg += f'/edit_policy - {help_edit_policy}\n'
     help_add_to_meeting = linesRepo.get_line('help_add_to_meeting', uid)
@@ -356,35 +358,72 @@ class NotificationReactionCmdHandler(RequestHandler):
 class AddDaughterTeamCmdHandler(RequestHandler):
     def handle_request(self, request) -> List[um.ServerResponse]:
         uid = request.user_id
-        text = request.text
+        text = str(request.text)
         state = stateRepo.get_state(uid)
-        if text == '/add_daughter_team':
-            msg = ''
+        if text == '/add_child_team':
+            msg = 'choose new parent:\n'
             teams = stub.GetOwnedTeams(bs.EntityId(id=uid))
             add_daughter_team_add_to = linesRepo.get_line('add_daughter_team_add_to', uid)
             for team in teams:
-                msg += f'/add_daughter_team{team.id} -- {add_daughter_team_add_to} {team.name}\n'
+                msg += f'/add_child_team{team.id} -- {add_daughter_team_add_to} {team.name}\n'
             return [
                 um.ServerResponse(user_id=uid, text=msg)
             ]
-        elif state is None:
-            parent_team_id = int(text[18:])
-            stateRepo.set_state(uid, State('adding_daughter_team', parent_team_id))
-            add_daughter_team_enter_id = linesRepo.get_line('add_daughter_team_enter_id', uid)
+        elif text.startswith('/add_child_team') and state is None:
+            parent_team_id = int(text[15:])
+            stateRepo.set_state(uid, State('searching_child_team', parent_team_id))
             return [
-                um.ServerResponse(user_id=uid, text=f'{add_daughter_team_enter_id}:')
+                um.ServerResponse(user_id=uid, text=f'mention team owner:')
+            ]
+        elif state is not None and state.action == 'searching_child_team':
+            mentioned_users = list(map(lambda m: int(m[2:len(m) - 2]), re.findall(r'\[\[\d+\]\]', text)))
+            msg = 'choose child team:\n'
+            if len(mentioned_users) == 1:
+                mus = mentioned_users[0]
+                owned_teams = stub.GetOwnedTeams(bs.EntityId(id=mus))
+                for team in owned_teams:
+                    msg += f'/add_child_team{team.id} -- {team.name}\n'
+            else:
+                return [um.ServerResponse(user_id=uid, text='mention only one user pls')]
+            pid = state.argument
+            stateRepo.clear_state(uid)
+            stateRepo.set_state(uid, State('adding_child_team', pid, mus))
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
+        elif state is not None and state.action == 'adding_child_team' and text.startswith('/add_child_team'):
+            pid = state.argument
+            oid = state.argument2
+            stateRepo.clear_state(uid)
+            child_team_id = int(text[15:])
+            ctinfo = stub.GetTeamInfo(bs.EntityId(id=child_team_id))
+            ptinfo = stub.GetTeamInfo(bs.EntityId(id=pid))
+            return [
+                um.ServerResponse(user_id=uid, text='invitation was sent'),
+                get_help_message(uid),
+                um.ServerResponse(user_id=oid, text=f'[[{uid}]] wants to add {ctinfo.name} to {ptinfo.name} children\n\n/acc_child{ctinfo.id}_{ptinfo.id} -- accept\n/rej_child{ctinfo.id}_{ptinfo.id} -- reject')
             ]
         else:
-            parent_team_id = state.argument
-            stateRepo.clear_state(uid)
-            daughter_team_id = int(text)
-            stub.AddParentTeam(bs.Participating(object=parent_team_id, subject=daughter_team_id))
-            parent_team_name = stub.GetTeamInfo(bs.EntityId(id=parent_team_id)).name
-            daughter_team_name = stub.GetTeamInfo(bs.EntityId(id=daughter_team_id)).name
-            add_daughter_team_is_daughter = linesRepo.get_line('add_daughter_team_is_daughter', uid)
-            response = [um.ServerResponse(user_id=uid, text=f'{daughter_team_name} {add_daughter_team_is_daughter} {parent_team_name}')]
-            response.append(get_help_message(uid))
-            return response
+            if state is not None:
+                stateRepo.clear_state(uid)
+            return [um.ServerResponse(user_id=uid, text='something went wront')]
+
+
+class AddChildTeamNotiifcationReactionCmdHandler(RequestHandler):
+    def handle_request(self, request) -> List[um.ServerResponse]:
+        uid = request.user_id
+        text = str(request.text)
+        teams = text[10:].split('_')
+        cid = int(teams[0])
+        pid = int(teams[1])
+        oid = stub.GetGroupOwner(bs.EntityId(id=pid)).id
+        ret = [um.ServerResponse(user_id=uid, text='understandable')]
+        if text.startswith('/acc_child'):
+            stub.AddParentTeam(bs.Participating(object=pid, subject=cid))
+            ret.append(um.ServerResponse(user_id=oid, text=f'[[{uid}]] team is now your child'))
+        else:
+            ret.append(um.ServerResponse(user_id=oid, text=f'[[{uid}]] rejected child invitation'))
+        return ret
 
 
 class EditPolicyCmdHandler(RequestHandler):
@@ -674,7 +713,7 @@ commandHandlers = CommandHandlers({
     '/invite_to_meeting': InviteToMeetingCmdHandler(),
     '/accept_meeting_invite': MeetingInviteReactionCmdHandler(),
     '/reject_meeting_invite': MeetingInviteReactionCmdHandler(),
-    '/add_daughter_team': AddDaughterTeamCmdHandler(),
+    '/add_child_team': AddDaughterTeamCmdHandler(),
     '/edit_policy': EditPolicyCmdHandler(),
     '/add_to_meeting': AddToMeetingCmdHandler(),
     '/update_meeting_time': UpdateMeetingTimeCmdHandler(),
@@ -686,7 +725,9 @@ commandHandlers = CommandHandlers({
     '/get_files': GetUploadedFilesCmdHandler(),
     '/change_language': ChangeLanguageCmdHandler(),
     '/aom': NotificationReactionCmdHandler(),
-    '/pom': NotificationReactionCmdHandler()
+    '/pom': NotificationReactionCmdHandler(),
+    '/acc_child': AddChildTeamNotiifcationReactionCmdHandler(),
+    '/rej_child': AddChildTeamNotiifcationReactionCmdHandler()
 })
 
 statesHandlers = StatesHandlers({
@@ -695,7 +736,8 @@ statesHandlers = StatesHandlers({
     'setting_meeting_desc': CreateMeetingCmdHandler(),
     'setting_meeting_time': CreateMeetingCmdHandler(),
     'inviting_to_meeting': InviteToMeetingCmdHandler(),
-    'adding_daughter_team': AddDaughterTeamCmdHandler(),
+    'searching_child_team': AddDaughterTeamCmdHandler(),
+    'adding_child_team': AddDaughterTeamCmdHandler(),
     'editing_policy': EditPolicyCmdHandler(),
     'adding_to_meeting': AddToMeetingCmdHandler(),
     'updating_meeting_time': UpdateMeetingTimeCmdHandler(),
