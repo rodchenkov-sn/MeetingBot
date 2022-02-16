@@ -67,6 +67,15 @@ services:
       - internal-net
     restart: on-failure
 
+  file-service:
+    networks:
+      - internal-net
+    build:
+      context: ./
+      dockerfile: file_service/Dockerfile
+    command: python main.py
+    ports:
+      - 50054:50054
 
 networks:
   internal-net:
