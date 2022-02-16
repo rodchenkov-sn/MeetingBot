@@ -40,6 +40,8 @@ assert(id_username_redis.ping())
 
 
 def sendMessage(id: int, text: str):
+    if text == '':
+        bot.send_message(id, '...')
     bot.send_message(id, text)
 
 

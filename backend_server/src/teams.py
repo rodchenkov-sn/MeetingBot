@@ -68,8 +68,19 @@ class TeamsRepo:
         return team.id
 
     def get_teams_by_owner(self, _owner: int) -> Iterable[Team]:
+        visited = set()
+        to_visit = []
         for item in self.__collection.find({'owner': _owner}):
-            yield team_from_mongo(item)
+            to_visit.append(team_from_mongo(item))
+        while to_visit:
+            curr = to_visit.pop()
+            if curr in visited:
+                continue
+            visited.add(curr)
+            yield curr
+            if curr.policy.propagate_admin:
+                for child in curr.children:
+                    to_visit.append(self.get_team(child))
 
     def get_team(self, _id: int) -> Team:
         return team_from_mongo(self.__collection.find_one({'_id': _id}))
@@ -83,6 +94,10 @@ class TeamsRepo:
         self.__collection.update_one({'_id': _id}, {'$set': {'propagate_policy': policy.propagate_policy}})
         self.__collection.update_one({'_id': _id}, {'$set': {'parent_visible': policy.parent_visible}})
         self.__collection.update_one({'_id': _id}, {'$set': {'propagate_admin': policy.propagate_admin}})
+        if policy.propagate_policy:
+            team = self.get_team(_id)
+            for child in team.children:
+                self.set_team_policy(child, policy)
 
     def get_grups_by_member(self, _user_id: int) -> Iterable[Team]:
         for item in self.__collection.find({'members': _user_id}):
@@ -100,7 +115,7 @@ class TeamsRepo:
 
     def get_invitable_members(self, _group_id: int) -> Iterable[int]:
         curr_team = self.get_team(_group_id)
-        while curr_team.parent != -1 and curr_team.policy.parent_visible:
+        while curr_team.parent != -1 and self.get_team(curr_team.parent).policy.parent_visible:
             curr_team = self.get_team(curr_team.parent)
         visible_members = set()
         visited_teams = set()
@@ -131,7 +146,7 @@ class TeamsRepo:
 
     def get_available_files(self, _team_id: int) -> Iterable[int]:
         curr_team = self.get_team(_team_id)
-        while curr_team.parent != -1 and curr_team.policy.parent_visible:
+        while curr_team.parent != -1 and self.get_team(curr_team.parent).policy.parent_visible:
             curr_team = self.get_team(curr_team.parent)
         visible_files = set()
         visited_teams = set()

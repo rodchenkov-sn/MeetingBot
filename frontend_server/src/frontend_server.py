@@ -298,6 +298,7 @@ class InviteToMeetingCmdHandler(RequestHandler):
             team_id = stub.GetMeetingInfo(bs.EntityId(id=meeting_id)).team
             invitable_members = map(lambda x: x.id, stub.GetInvitableMembers(bs.EntityId(id=team_id)))
             response = []
+            noninvitable = []
             for mu in mentioned_users:
                 if mu in invitable_members:
                     inviting_to_meeting_you_were_invited = linesRepo.get_line('inviting_to_meeting_you_were_invited', mu)
@@ -306,8 +307,12 @@ class InviteToMeetingCmdHandler(RequestHandler):
                     inviting_to_meeting_reject = linesRepo.get_line('inviting_to_meeting_reject', mu)
                     invite_msg = f'{inviting_to_meeting_you_were_invited} {stub.GetMeetingInfo(bs.EntityId(id=meeting_id)).desc} {inviting_to_meeting_by} [[{uid}]]\n\n/accept_meeting_invite{meeting_id} -- {inviting_to_meeting_accept}\n/reject_meeting_invite{meeting_id} -- {inviting_to_meeting_reject}'
                     response.append(um.ServerResponse(user_id=mu, text=invite_msg))
+                else:
+                    noninvitable.append(mu)
             inviting_to_meeting_invitations_send = linesRepo.get_line('inviting_to_meeting_invitations_send', uid)
             response.append(um.ServerResponse(user_id=uid, text=f'{inviting_to_meeting_invitations_send}'))
+            if len(noninvitable) > 0:
+                response.append(um.ServerResponse(user_id=uid, text=f'cant invite:\n{" ".join(map(lambda x: f"[[{x}]]", noninvitable))}'))
             response.append(get_help_message(uid))
             return response
 
