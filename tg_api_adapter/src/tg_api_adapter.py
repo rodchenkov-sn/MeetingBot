@@ -89,8 +89,9 @@ def get_text_messages(message):
             scheduler.add_job(
                 sendMessage, 
                 'date', 
-                [response.user_id, ids_to_mentions(response.text)], 
-                run_date=datetime.fromtimestamp(response.timestamp))
+                args=[response.user_id, ids_to_mentions(response.text)], 
+                run_date=datetime.fromtimestamp(response.timestamp),
+                timezone='Europe/Moscow')
         else:
             sendMessage(response.user_id, ids_to_mentions(response.text))
 

@@ -204,8 +204,13 @@ class CreateMeetingCmdHandler(RequestHandler):
         elif state.action == 'setting_meeting_time':
             meeting_id = state.argument
             group_id = state.argument2
+            try:
+                dt = datetime.strptime(text, '%d-%m-%Y %H:%M')
+            except:
+                return [
+                    um.ServerResponse(user_id=uid, text=f'try again!')
+                ]
             stateRepo.clear_state(uid)
-            dt = datetime.strptime(text, '%d-%m-%Y %H:%M')
             stub.UpdateMeetingInfo(bs.MeetingInfo(
                 id=meeting_id,
                 creator=-1,  # not important
@@ -218,9 +223,11 @@ class CreateMeetingCmdHandler(RequestHandler):
             if uid == group_owner or not group_policy.needApproveForMeetingCreation:
                 stub.ApproveMeeting(bs.EntityId(id=meeting_id))
                 create_meeting_meeting_created = linesRepo.get_line('create_meeting_meeting_created', uid)
-                return [
+                ret = [
                     um.ServerResponse(user_id=uid, text=f'{create_meeting_meeting_created}!')
                 ]
+                minfo = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
+                ret.append(um.ServerResponse(user_id=uid, text=f'{minfo.desc} in T - 5!', event_id=meeting_id, timestamp=int((dt - timedelta(minutes=5)).timestamp())))
             else:
                 meeting_info = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
                 create_meeting_wait_approval = linesRepo.get_line('create_meeting_wait_approval', uid)
@@ -228,10 +235,11 @@ class CreateMeetingCmdHandler(RequestHandler):
                 create_meeting_created_meeting = linesRepo.get_line('create_meeting_created_meeting', group_owner)
                 create_meeting_approve = linesRepo.get_line('create_meeting_approve', group_owner)
                 create_meeting_reject = linesRepo.get_line('create_meeting_reject', group_owner)
-                return [
+                ret = [
                     um.ServerResponse(user_id=uid, text=f'{create_meeting_wait_approval}'),
                     um.ServerResponse(user_id=group_owner, text=f'{create_meeting_user} [[{uid}]] {create_meeting_created_meeting} {meeting_info.desc}\n/approve_meeting{meeting_id} -- {create_meeting_approve}\n/reject_meeting{meeting_id} -- {create_meeting_reject}')
                 ]
+            return ret
 
 
 class MeetingApproveCmdHandle(RequestHandler):
@@ -315,7 +323,9 @@ class MeetingInviteReactionCmdHandler(RequestHandler):
             meeting_invite_reaction_you_accepted = linesRepo.get_line('meeting_invite_reaction_you_accepted', uid)
             meeting_invite_reaction_meeting_starts_at = linesRepo.get_line('meeting_invite_reaction_meeting_starts_at', uid)
             meeting_invite_reaction_accepted = linesRepo.get_line('meeting_invite_reaction_accepted', creator_id)
+            minfo = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
             return [
+                um.ServerResponse(user_id=uid, text=f'{minfo.desc} in T - 5!\n\n/pom{meeting_id} -- heading!\n/aom{meeting_id} -- ignore', event_id=meeting_id, timestamp=int((datetime.fromtimestamp(minfo.time) - timedelta(minutes=5)).timestamp())),
                 um.ServerResponse(user_id=uid, text=f'{meeting_invite_reaction_you_accepted}'),
                 um.ServerResponse(user_id=uid, text=f'{meeting_info.desc} {meeting_invite_reaction_meeting_starts_at} {meeting_date}'),
                 um.ServerResponse(user_id=creator_id, text=f'[[{uid}]] {meeting_invite_reaction_accepted}')
@@ -327,6 +337,20 @@ class MeetingInviteReactionCmdHandler(RequestHandler):
                 um.ServerResponse(user_id=uid, text=f'{meeting_invite_reaction_you_rejected}'),
                 um.ServerResponse(user_id=creator_id, text=f'[[{uid}]] {meeting_invite_reaction_rejected}')
             ]
+
+
+class NotificationReactionCmdHandler(RequestHandler):
+    def handle_request(self, request) -> List[um.ServerResponse]:
+        uid = request.user_id
+        text = str(request.text)
+        mid = int(text[4:])
+        minfo = stub.GetMeetingInfo(bs.EntityId(id=mid))
+        ret = [um.ServerResponse(user_id=uid, text='Understandable have a nice day')]
+        if text.startswith('/pom'):
+            ret.append(um.ServerResponse(user_id=minfo.creator, text=f'[[{uid}]] id heading to {minfo.desc}'))
+        else:
+            ret.append(um.ServerResponse(user_id=minfo.creator, text=f'[[{uid}]] wont be at {minfo.desc}'))
+        return ret
 
 
 class AddDaughterTeamCmdHandler(RequestHandler):
@@ -661,6 +685,8 @@ commandHandlers = CommandHandlers({
     '/upload_file': UploadFileCmdHandler(),
     '/get_files': GetUploadedFilesCmdHandler(),
     '/change_language': ChangeLanguageCmdHandler(),
+    '/aom': NotificationReactionCmdHandler(),
+    '/pom': NotificationReactionCmdHandler()
 })
 
 statesHandlers = StatesHandlers({
