@@ -10,3 +10,4 @@ RUN pip install -r requirements.txt
 
 COPY calendar_service/src/ /app
 COPY config.yml /app
+COPY credentials.json /app
