@@ -24,7 +24,7 @@ calendar_stub = css.CalendarServiceStub(channel_calendar)
 import file_repo_service_pb2 as fs
 import file_repo_service_pb2_grpc as fss
 
-channel_fs = grpc.insecure_channel('localhost:50054')
+channel_fs = grpc.insecure_channel('file-service:50054')
 fs_stub = fss.FileRepoServiceStub(channel_fs)
 
 from states import State, StateRepo
