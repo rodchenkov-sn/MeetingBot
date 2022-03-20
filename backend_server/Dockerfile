@@ -10,3 +10,5 @@ RUN pip install -r requirements.txt
 
 COPY backend_server/src/ /app
 COPY config.yml /app
+
+RUN pytest -v

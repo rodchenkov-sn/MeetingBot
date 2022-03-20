@@ -1,7 +1,6 @@
-# admin:intervention-tradition-responsible-empirical
-
 import random
 import grpc
+import yaml
 
 from concurrent import futures
 
@@ -11,11 +10,13 @@ import backend_service_pb2_grpc as bsg
 from team_policy import TeamPolicy, policy_from_msg
 from teams import Team, TeamsRepo
 from meetings import Meeting, MeetingsRepo, meeting_from_msg
+from mongo_collection import MongoCollection
 
+with open('config.yml', 'r') as config_file:
+    config = yaml.safe_load(config_file)
 
-teamsRepo = TeamsRepo()
-meetingsRepo = MeetingsRepo()
-
+teamsRepo = TeamsRepo(MongoCollection(config['teams_repo_url'], 'MeetingBotDB', 'Teams'))
+meetingsRepo = MeetingsRepo(MongoCollection(config['meetings_repo_url'], 'MeetingBotDB', 'Meetings'))
 
 import calendar_service_pb2 as cs
 import calendar_service_pb2_grpc as css
