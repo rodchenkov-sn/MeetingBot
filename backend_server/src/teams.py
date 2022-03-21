@@ -18,6 +18,16 @@ class Team:
         self.policy = TeamPolicy()
         self.uploaded_files = []
 
+    def __eq__(self, other):
+        return (
+            self.id == other.id
+            and self.owner == other.owner
+            and self.members == other.members
+            and self.parent == other.parent
+            and self.children == other.children
+            and self.policy == other.policy
+        )
+
     def add_member(self, _member_id: int) -> None:
         self.members.append(_member_id)
 
