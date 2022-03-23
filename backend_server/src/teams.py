@@ -76,15 +76,15 @@ class TeamsRepo:
         return team.id
 
     def get_teams_by_owner(self, _owner: int) -> Iterable[Team]:
-        visited = set()
+        visited = []
         to_visit = []
-        for item in self.__collection.find_one({'owner': _owner}):
+        for item in self.__collection.find_many({'owner': _owner}):
             to_visit.append(team_from_mongo(item))
         while to_visit:
             curr = to_visit.pop()
             if curr in visited:
                 continue
-            visited.add(curr)
+            visited.append(curr)
             yield curr
             if curr.policy.propagate_admin:
                 for child in curr.children:

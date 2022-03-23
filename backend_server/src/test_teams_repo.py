@@ -3,7 +3,7 @@ import pytest
 from teams import Team, TeamsRepo, team_from_mongo, TeamPolicy
 
 from test_mock_collection import MockCollection
-
+from test_operators import team_eq_ignore_id
 
 
 DEFAULT_TEAM_OWNER = 1
@@ -16,16 +16,6 @@ def make_default_empty_team() -> Team:
 
 def make_default_policy() -> TeamPolicy:
     return TeamPolicy()
-
-
-def eq_ignore_id(a: Team, b: Team) -> bool:
-    return (
-        a.owner == b.owner
-        and a.members == b.members
-        and a.parent == b.parent
-        and a.children == b.children
-        and a.policy == b.policy
-    )
 
 
 @pytest.fixture()
@@ -45,7 +35,7 @@ def test_add_team(resource_setup):
     assert len(collection.items) == 1
     t = team_from_mongo(collection.items[0])
     assert t != make_default_empty_team()
-    assert eq_ignore_id(t, make_default_empty_team())
+    assert team_eq_ignore_id(t, make_default_empty_team())
 
 
 def test_set_team_parent(resource_setup):

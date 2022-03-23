@@ -1,2 +1,2 @@
 [run]
-omit = *pb2.py, *grpc.py, *test*
+omit = *pb2.py, *grpc.py, *test*, *mongo*
