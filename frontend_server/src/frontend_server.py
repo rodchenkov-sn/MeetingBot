@@ -1,5 +1,4 @@
 from concurrent import futures
-from curses.ascii import ctrl
 from os import stat
 
 import grpc
