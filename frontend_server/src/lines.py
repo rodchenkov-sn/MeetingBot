@@ -19,6 +19,7 @@ class LinesRepo:
             "help_get_files": {"en": "to get available files", "ru": "чтобы получить доступные файлы"},
             "help_auth_gcal": {"en": "to auth using google calendar",
                                "ru": "чтобы авторизоваться используя гугл календарь"},
+            "help_change_language": {"en": "to change language", "ru": "чтобы сменить язык"},
             "help_help": {"en": "to see this message", "ru": "чтобы увидеть это сообщение"},
             "create_team_team_created": {"en": "team created", "ru": "команда создана"},
             "create_team_enter_name": {"en": "Enter name", "ru": "Введите Имя"},
