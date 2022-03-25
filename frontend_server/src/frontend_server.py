@@ -138,7 +138,7 @@ class InviteUserCmdHandler(RequestHandler):
                 response.append(um.ServerResponse(user_id=mid, text=invite_msg))
             invite_user_invitations_send = self.__lines.get_line('invite_user_invitations_send', uid)
             response.append(um.ServerResponse(user_id=uid, text=f'{invite_user_invitations_send}'))
-            response.append(get_help_message(uid))
+            response.append(get_help_message(uid, self.__lines))
             return response
 
 
