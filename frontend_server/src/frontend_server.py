@@ -292,50 +292,55 @@ class MeetingApproveCmdHandle(RequestHandler):
 
 
 class InviteToMeetingCmdHandler(RequestHandler):
+    def __init__(self, states, backend, lines):
+        super().__init__()
+        self.__states = states
+        self.__backend = backend
+        self.__lines = lines
+
     def handle_request(self, request) -> List[um.ServerResponse]:
-        return []
-        # uid = request.user_id
-        # text = request.text
-        # state = stateRepo.get_state(uid)
-        # if request.text == '/invite_to_meeting':
-        #     msg = ''
-        #     meetings = stub.GetOwnedMeetings(bs.EntityId(id=uid))
-        #     for meeting in meetings:
-        #         msg += f'/invite_to_meeting{meeting.id} -- {meeting.name}\n'
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=msg)
-        #     ]
-        # elif state is None:
-        #     meeting_id = int(text[18:])
-        #     stateRepo.set_state(uid, State('inviting_to_meeting', meeting_id))
-        #     inviting_to_meeting_tag = linesRepo.get_line('inviting_to_meeting_tag', uid)
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'{inviting_to_meeting_tag}')
-        #     ]
-        # else:
-        #     meeting_id = state.argument
-        #     stateRepo.clear_state(uid)
-        #     mentioned_users = map(lambda m: int(m[2:len(m) - 2]), re.findall(r'\[\[\d+\]\]', text))
-        #     team_id = stub.GetMeetingInfo(bs.EntityId(id=meeting_id)).team
-        #     invitable_members = map(lambda x: x.id, stub.GetInvitableMembers(bs.EntityId(id=team_id)))
-        #     response = []
-        #     noninvitable = []
-        #     for mu in mentioned_users:
-        #         if mu in invitable_members:
-        #             inviting_to_meeting_you_were_invited = linesRepo.get_line('inviting_to_meeting_you_were_invited', mu)
-        #             inviting_to_meeting_by = linesRepo.get_line('inviting_to_meeting_by', mu)
-        #             inviting_to_meeting_accept = linesRepo.get_line('inviting_to_meeting_accept', mu)
-        #             inviting_to_meeting_reject = linesRepo.get_line('inviting_to_meeting_reject', mu)
-        #             invite_msg = f'{inviting_to_meeting_you_were_invited} {stub.GetMeetingInfo(bs.EntityId(id=meeting_id)).desc} {inviting_to_meeting_by} [[{uid}]]\n\n/accept_meeting_invite{meeting_id} -- {inviting_to_meeting_accept}\n/reject_meeting_invite{meeting_id} -- {inviting_to_meeting_reject}'
-        #             response.append(um.ServerResponse(user_id=mu, text=invite_msg))
-        #         else:
-        #             noninvitable.append(mu)
-        #     inviting_to_meeting_invitations_send = linesRepo.get_line('inviting_to_meeting_invitations_send', uid)
-        #     response.append(um.ServerResponse(user_id=uid, text=f'{inviting_to_meeting_invitations_send}'))
-        #     if len(noninvitable) > 0:
-        #         response.append(um.ServerResponse(user_id=uid, text=f'cant invite:\n{" ".join(map(lambda x: f"[[{x}]]", noninvitable))}'))
-        #     response.append(get_help_message(uid))
-        #     return response
+        uid = request.user_id
+        text = request.text
+        state = self.__states.get_state(uid)
+        if request.text == '/invite_to_meeting':
+            msg = ''
+            meetings = self.__backend.GetOwnedMeetings(bs.EntityId(id=uid))
+            for meeting in meetings:
+                msg += f'/invite_to_meeting{meeting.id} -- {meeting.name}\n'
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
+        elif state is None:
+            meeting_id = int(text[18:])
+            self.__states.set_state(uid, State('inviting_to_meeting', meeting_id))
+            inviting_to_meeting_tag = self.__lines.get_line('inviting_to_meeting_tag', uid)
+            return [
+                um.ServerResponse(user_id=uid, text=f'{inviting_to_meeting_tag}')
+            ]
+        else:
+            meeting_id = state.argument
+            self.__states.clear_state(uid)
+            mentioned_users = map(lambda m: int(m[2:len(m) - 2]), re.findall(r'\[\[\d+\]\]', text))
+            team_id = self.__backend.GetMeetingInfo(bs.EntityId(id=meeting_id)).team
+            invitable_members = map(lambda x: x.id, self.__backend.GetInvitableMembers(bs.EntityId(id=team_id)))
+            response = []
+            noninvitable = []
+            for mu in mentioned_users:
+                if mu in invitable_members:
+                    inviting_to_meeting_you_were_invited = self.__lines.get_line('inviting_to_meeting_you_were_invited', mu)
+                    inviting_to_meeting_by = self.__lines.get_line('inviting_to_meeting_by', mu)
+                    inviting_to_meeting_accept = self.__lines.get_line('inviting_to_meeting_accept', mu)
+                    inviting_to_meeting_reject = self.__lines.get_line('inviting_to_meeting_reject', mu)
+                    invite_msg = f'{inviting_to_meeting_you_were_invited} {self.__backend.GetMeetingInfo(bs.EntityId(id=meeting_id)).desc} {inviting_to_meeting_by} [[{uid}]]\n\n/accept_meeting_invite{meeting_id} -- {inviting_to_meeting_accept}\n/reject_meeting_invite{meeting_id} -- {inviting_to_meeting_reject}'
+                    response.append(um.ServerResponse(user_id=mu, text=invite_msg))
+                else:
+                    noninvitable.append(mu)
+            inviting_to_meeting_invitations_send = self.__lines.get_line('inviting_to_meeting_invitations_send', uid)
+            response.append(um.ServerResponse(user_id=uid, text=f'{inviting_to_meeting_invitations_send}'))
+            if len(noninvitable) > 0:
+                response.append(um.ServerResponse(user_id=uid, text=f'cant invite:\n{" ".join(map(lambda x: f"[[{x}]]", noninvitable))}'))
+            response.append(get_help_message(uid, self.__lines))
+            return response
 
 
 class MeetingInviteReactionCmdHandler(RequestHandler):
@@ -759,7 +764,7 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
             '/create_meeting': CreateMeetingCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/approve_meeting': MeetingApproveCmdHandle(self.__state_repo, self.__backend, self.__lines_repo),
             '/reject_meeting': MeetingApproveCmdHandle(self.__state_repo, self.__backend, self.__lines_repo),
-            '/invite_to_meeting': InviteToMeetingCmdHandler(),
+            '/invite_to_meeting': InviteToMeetingCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/accept_meeting_invite': MeetingInviteReactionCmdHandler(),
             '/reject_meeting_invite': MeetingInviteReactionCmdHandler(),
             '/add_child_team': AddDaughterTeamCmdHandler(),
@@ -784,7 +789,7 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
             'inviting_members': InviteUserCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             'setting_meeting_desc': CreateMeetingCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             'setting_meeting_time': CreateMeetingCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
-            'inviting_to_meeting': InviteToMeetingCmdHandler(),
+            'inviting_to_meeting': InviteToMeetingCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             'searching_child_team': AddDaughterTeamCmdHandler(),
             'adding_child_team': AddDaughterTeamCmdHandler(),
             'editing_policy': EditPolicyCmdHandler(),

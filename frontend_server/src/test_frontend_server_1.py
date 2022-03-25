@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from states import StateRepo
 from lines import LinesRepo
 
-from frontend_server import StartCmdHandler, CreateTeamCmdHandler, InviteUserCmdHandler, InviteReactionCmdHandler, CreateMeetingCmdHandler, MeetingApproveCmdHandle
+from frontend_server import StartCmdHandler, CreateTeamCmdHandler, InviteUserCmdHandler, InviteReactionCmdHandler, CreateMeetingCmdHandler, MeetingApproveCmdHandle, InviteToMeetingCmdHandler
 from frontend_server import get_help_message
 
 import user_message_pb2 as um
@@ -53,11 +53,15 @@ REJECT_INVITE_CMD = "/reject_invite"
 CREATE_MEETING_CMD = "/create_meeting"
 APPROVE_MEETING_CMD = "/approve_meeting"
 REJECT_MEETING_CMD = "/reject_meeting"
+INVITE_TO_MEETING_CMD = "/invite_to_meeting"
+ACCEPT_MEETING_INVITE = "/accept_meeting_invite"
+REJECT_MEETING_INVITE = "/reject_meeting_invite"
 
 CREATING_TEAM_STATE = "creating_team"
 INVITING_MEMBERS_STATE = "inviting_members"
 SETTING_MEETING_DESC_STATE = "setting_meeting_desc"
 SETTING_MEETING_TIME_STATE = "setting_meeting_time"
+INVITING_TO_MEETING_STATE = "inviting_to_meeting"
 
 
 class BackendServiceStub:
@@ -106,6 +110,12 @@ class BackendServiceStub:
             desc=DEFAULT_MEETING_DESC,
             time=DEFAULT_MEETING_TIME_INT
         )
+
+    def GetOwnedMeetings(self, msg):
+        yield bs.NamedInfo(id=DEFAULT_MEETING_ID, name=DEFAULT_MEETING_DESC)
+
+    def GetInvitableMembers(self, msg):
+        yield bs.EntityId(id=DEFAULT_USER_TAGGED_ID)
 
 
 class FrontendResources:
@@ -432,3 +442,49 @@ def test_meeting_approve_command_reject(fr):
     assert r2.user_id == DEFAULT_USER_TEAM_OWNER_ID
     meeting_approve_rejected = fr.lines.get_line('meeting_approve_rejected', DEFAULT_USER_TEAM_OWNER_ID)
     assert r2.text == f'{meeting_approve_rejected}!'
+
+
+def test_invite_to_meeting_command(fr):
+    itmh = InviteToMeetingCmdHandler(fr.states, fr.backend, fr.lines)
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TEAM_OWNER_ID,
+        text=INVITE_TO_MEETING_CMD
+    )
+    r = list(itmh.handle_request(msg))
+    r = r.pop()
+    assert r.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r.text == f'{INVITE_TO_MEETING_CMD}{DEFAULT_MEETING_ID} -- {DEFAULT_MEETING_DESC}\n'
+
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TEAM_OWNER_ID,
+        text=f'{INVITE_TO_MEETING_CMD}{DEFAULT_MEETING_ID}'
+    )
+    r = list(itmh.handle_request(msg))
+    r = r.pop()
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).action == INVITING_TO_MEETING_STATE
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument == DEFAULT_MEETING_ID
+    assert r.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    inviting_to_meeting_tag = fr.lines.get_line('inviting_to_meeting_tag', DEFAULT_USER_TEAM_OWNER_ID)
+    assert r.text == f'{inviting_to_meeting_tag}'
+
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TEAM_OWNER_ID,
+        text=f"[[{DEFAULT_USER_TAGGED_ID}]]"
+    )
+    r = list(itmh.handle_request(msg))
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID) is None
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r1.text == HELP_MESSAGE
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    inviting_to_meeting_invitations_send = fr.lines.get_line('inviting_to_meeting_invitations_send', DEFAULT_USER_TEAM_OWNER_ID)
+    assert r2.text == f'{inviting_to_meeting_invitations_send}'
+    r3 = r.pop()
+    assert r3.user_id == DEFAULT_USER_TAGGED_ID
+    inviting_to_meeting_you_were_invited = fr.lines.get_line('inviting_to_meeting_you_were_invited', DEFAULT_USER_TAGGED_ID)
+    inviting_to_meeting_by = fr.lines.get_line('inviting_to_meeting_by', DEFAULT_USER_TAGGED_ID)
+    inviting_to_meeting_accept = fr.lines.get_line('inviting_to_meeting_accept', DEFAULT_USER_TAGGED_ID)
+    inviting_to_meeting_reject = fr.lines.get_line('inviting_to_meeting_reject', DEFAULT_USER_TAGGED_ID)
+    invite_msg = f'{inviting_to_meeting_you_were_invited} {DEFAULT_MEETING_DESC} {inviting_to_meeting_by} [[{DEFAULT_USER_TEAM_OWNER_ID}]]\n\n{ACCEPT_MEETING_INVITE}{DEFAULT_MEETING_ID} -- {inviting_to_meeting_accept}\n{REJECT_MEETING_INVITE}{DEFAULT_MEETING_ID} -- {inviting_to_meeting_reject}'
+    assert r3.text == invite_msg
