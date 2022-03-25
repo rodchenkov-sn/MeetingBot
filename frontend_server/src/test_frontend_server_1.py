@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from states import StateRepo
 from lines import LinesRepo
 
-from frontend_server import StartCmdHandler, CreateTeamCmdHandler, InviteUserCmdHandler, InviteReactionCmdHandler, CreateMeetingCmdHandler, MeetingApproveCmdHandle, InviteToMeetingCmdHandler
+from frontend_server import StartCmdHandler, CreateTeamCmdHandler, InviteUserCmdHandler, InviteReactionCmdHandler, CreateMeetingCmdHandler, MeetingApproveCmdHandle, InviteToMeetingCmdHandler, MeetingInviteReactionCmdHandler
 from frontend_server import get_help_message
 
 import user_message_pb2 as um
@@ -54,8 +54,8 @@ CREATE_MEETING_CMD = "/create_meeting"
 APPROVE_MEETING_CMD = "/approve_meeting"
 REJECT_MEETING_CMD = "/reject_meeting"
 INVITE_TO_MEETING_CMD = "/invite_to_meeting"
-ACCEPT_MEETING_INVITE = "/accept_meeting_invite"
-REJECT_MEETING_INVITE = "/reject_meeting_invite"
+ACCEPT_MEETING_INVITE_CMD = "/accept_meeting_invite"
+REJECT_MEETING_INVITE_CMD = "/reject_meeting_invite"
 
 CREATING_TEAM_STATE = "creating_team"
 INVITING_MEMBERS_STATE = "inviting_members"
@@ -116,6 +116,9 @@ class BackendServiceStub:
 
     def GetInvitableMembers(self, msg):
         yield bs.EntityId(id=DEFAULT_USER_TAGGED_ID)
+
+    def AddParticipant(self, msg):
+        return bs.SimpleResponse(ok=True)
 
 
 class FrontendResources:
@@ -486,5 +489,47 @@ def test_invite_to_meeting_command(fr):
     inviting_to_meeting_by = fr.lines.get_line('inviting_to_meeting_by', DEFAULT_USER_TAGGED_ID)
     inviting_to_meeting_accept = fr.lines.get_line('inviting_to_meeting_accept', DEFAULT_USER_TAGGED_ID)
     inviting_to_meeting_reject = fr.lines.get_line('inviting_to_meeting_reject', DEFAULT_USER_TAGGED_ID)
-    invite_msg = f'{inviting_to_meeting_you_were_invited} {DEFAULT_MEETING_DESC} {inviting_to_meeting_by} [[{DEFAULT_USER_TEAM_OWNER_ID}]]\n\n{ACCEPT_MEETING_INVITE}{DEFAULT_MEETING_ID} -- {inviting_to_meeting_accept}\n{REJECT_MEETING_INVITE}{DEFAULT_MEETING_ID} -- {inviting_to_meeting_reject}'
+    invite_msg = f'{inviting_to_meeting_you_were_invited} {DEFAULT_MEETING_DESC} {inviting_to_meeting_by} [[{DEFAULT_USER_TEAM_OWNER_ID}]]\n\n{ACCEPT_MEETING_INVITE_CMD}{DEFAULT_MEETING_ID} -- {inviting_to_meeting_accept}\n{REJECT_MEETING_INVITE_CMD}{DEFAULT_MEETING_ID} -- {inviting_to_meeting_reject}'
     assert r3.text == invite_msg
+
+
+def test_meeting_invite_reaction_accept(fr):
+    mirh = MeetingInviteReactionCmdHandler(fr.states, fr.backend, fr.lines)
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TAGGED_ID,
+        text=f"{ACCEPT_MEETING_INVITE_CMD}{DEFAULT_MEETING_ID}"
+    )
+    r = list(mirh.handle_request(msg))
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    meeting_invite_reaction_accepted = fr.lines.get_line('meeting_invite_reaction_accepted', DEFAULT_USER_TEAM_OWNER_ID)
+    assert r1.text == f'[[{DEFAULT_USER_TAGGED_ID}]] {meeting_invite_reaction_accepted}'
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_USER_TAGGED_ID
+    meeting_date = datetime.fromtimestamp(DEFAULT_MEETING_TIME_INT)
+    meeting_invite_reaction_meeting_starts_at = fr.lines.get_line('meeting_invite_reaction_meeting_starts_at', DEFAULT_USER_TAGGED_ID)
+    assert r2.text == f'{DEFAULT_MEETING_DESC} {meeting_invite_reaction_meeting_starts_at} {meeting_date}'
+    r3 = r.pop()
+    assert r3.user_id == DEFAULT_USER_TAGGED_ID
+    meeting_invite_reaction_you_accepted = fr.lines.get_line('meeting_invite_reaction_you_accepted', DEFAULT_USER_TAGGED_ID)
+    assert r3.text == f'{meeting_invite_reaction_you_accepted}'
+    r4 = r.pop()
+    assert r4.user_id == DEFAULT_USER_TAGGED_ID
+    assert r4.text == f'{DEFAULT_MEETING_DESC} in T - 5!\n\n/pom{DEFAULT_MEETING_ID} -- heading!\n/aom{DEFAULT_MEETING_ID} -- ignore'
+
+
+def test_meeting_invite_reaction_reject(fr):
+    mirh = MeetingInviteReactionCmdHandler(fr.states, fr.backend, fr.lines)
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TAGGED_ID,
+        text=f"{REJECT_MEETING_INVITE_CMD}{DEFAULT_MEETING_ID}"
+    )
+    r = list(mirh.handle_request(msg))
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    meeting_invite_reaction_rejected = fr.lines.get_line('meeting_invite_reaction_rejected', DEFAULT_USER_TEAM_OWNER_ID)
+    assert r1.text == f'[[{DEFAULT_USER_TAGGED_ID}]] {meeting_invite_reaction_rejected}'
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_USER_TAGGED_ID
+    meeting_invite_reaction_you_rejected = fr.lines.get_line('meeting_invite_reaction_you_rejected', DEFAULT_USER_TAGGED_ID)
+    assert r2.text == f'{meeting_invite_reaction_you_rejected}'

@@ -344,33 +344,38 @@ class InviteToMeetingCmdHandler(RequestHandler):
 
 
 class MeetingInviteReactionCmdHandler(RequestHandler):
+    def __init__(self, states, backend, lines):
+        super().__init__()
+        self.__states = states
+        self.__backend = backend
+        self.__lines = lines
+
     def handle_request(self, request) -> List[um.ServerResponse]:
-        return []
-        # uid = request.user_id
-        # text = request.text
-        # meeting_id = int(text[22:])
-        # meeting_info = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
-        # creator_id = meeting_info.creator
-        # if text.startswith('/accept_meeting_invite'):
-        #     stub.AddParticipant(bs.Participating(object=meeting_id, subject=uid))
-        #     meeting_date = datetime.fromtimestamp(meeting_info.time)
-        #     meeting_invite_reaction_you_accepted = linesRepo.get_line('meeting_invite_reaction_you_accepted', uid)
-        #     meeting_invite_reaction_meeting_starts_at = linesRepo.get_line('meeting_invite_reaction_meeting_starts_at', uid)
-        #     meeting_invite_reaction_accepted = linesRepo.get_line('meeting_invite_reaction_accepted', creator_id)
-        #     minfo = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'{minfo.desc} in T - 5!\n\n/pom{meeting_id} -- heading!\n/aom{meeting_id} -- ignore', event_id=meeting_id, timestamp=int((datetime.fromtimestamp(minfo.time) - timedelta(minutes=5)).timestamp())),
-        #         um.ServerResponse(user_id=uid, text=f'{meeting_invite_reaction_you_accepted}'),
-        #         um.ServerResponse(user_id=uid, text=f'{meeting_info.desc} {meeting_invite_reaction_meeting_starts_at} {meeting_date}'),
-        #         um.ServerResponse(user_id=creator_id, text=f'[[{uid}]] {meeting_invite_reaction_accepted}')
-        #     ]
-        # else:
-        #     meeting_invite_reaction_you_rejected = linesRepo.get_line('meeting_invite_reaction_you_rejected', uid)
-        #     meeting_invite_reaction_rejected = linesRepo.get_line('meeting_invite_reaction_rejected', creator_id)
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'{meeting_invite_reaction_you_rejected}'),
-        #         um.ServerResponse(user_id=creator_id, text=f'[[{uid}]] {meeting_invite_reaction_rejected}')
-        #     ]
+        uid = request.user_id
+        text = request.text
+        meeting_id = int(text[22:])
+        meeting_info = self.__backend.GetMeetingInfo(bs.EntityId(id=meeting_id))
+        creator_id = meeting_info.creator
+        if text.startswith('/accept_meeting_invite'):
+            self.__backend.AddParticipant(bs.Participating(object=meeting_id, subject=uid))
+            meeting_date = datetime.fromtimestamp(meeting_info.time)
+            meeting_invite_reaction_you_accepted = self.__lines.get_line('meeting_invite_reaction_you_accepted', uid)
+            meeting_invite_reaction_meeting_starts_at = self.__lines.get_line('meeting_invite_reaction_meeting_starts_at', uid)
+            meeting_invite_reaction_accepted = self.__lines.get_line('meeting_invite_reaction_accepted', creator_id)
+            minfo = self.__backend.GetMeetingInfo(bs.EntityId(id=meeting_id))
+            return [
+                um.ServerResponse(user_id=uid, text=f'{minfo.desc} in T - 5!\n\n/pom{meeting_id} -- heading!\n/aom{meeting_id} -- ignore', event_id=meeting_id, timestamp=int((datetime.fromtimestamp(minfo.time) - timedelta(minutes=5)).timestamp())),
+                um.ServerResponse(user_id=uid, text=f'{meeting_invite_reaction_you_accepted}'),
+                um.ServerResponse(user_id=uid, text=f'{meeting_info.desc} {meeting_invite_reaction_meeting_starts_at} {meeting_date}'),
+                um.ServerResponse(user_id=creator_id, text=f'[[{uid}]] {meeting_invite_reaction_accepted}')
+            ]
+        else:
+            meeting_invite_reaction_you_rejected = self.__lines.get_line('meeting_invite_reaction_you_rejected', uid)
+            meeting_invite_reaction_rejected = self.__lines.get_line('meeting_invite_reaction_rejected', creator_id)
+            return [
+                um.ServerResponse(user_id=uid, text=f'{meeting_invite_reaction_you_rejected}'),
+                um.ServerResponse(user_id=creator_id, text=f'[[{uid}]] {meeting_invite_reaction_rejected}')
+            ]
 
 
 class NotificationReactionCmdHandler(RequestHandler):
@@ -765,8 +770,8 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
             '/approve_meeting': MeetingApproveCmdHandle(self.__state_repo, self.__backend, self.__lines_repo),
             '/reject_meeting': MeetingApproveCmdHandle(self.__state_repo, self.__backend, self.__lines_repo),
             '/invite_to_meeting': InviteToMeetingCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
-            '/accept_meeting_invite': MeetingInviteReactionCmdHandler(),
-            '/reject_meeting_invite': MeetingInviteReactionCmdHandler(),
+            '/accept_meeting_invite': MeetingInviteReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
+            '/reject_meeting_invite': MeetingInviteReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/add_child_team': AddDaughterTeamCmdHandler(),
             '/edit_policy': EditPolicyCmdHandler(),
             '/add_to_meeting': AddToMeetingCmdHandler(),
