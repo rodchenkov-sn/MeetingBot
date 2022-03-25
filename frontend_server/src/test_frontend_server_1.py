@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from states import StateRepo
 from lines import LinesRepo
 
-from frontend_server import StartCmdHandler, CreateTeamCmdHandler, InviteUserCmdHandler, InviteReactionCmdHandler, CreateMeetingCmdHandler, MeetingApproveCmdHandle, InviteToMeetingCmdHandler, MeetingInviteReactionCmdHandler, AddDaughterTeamCmdHandler, EditPolicyCmdHandler, NotificationReactionCmdHandler
+from frontend_server import StartCmdHandler, CreateTeamCmdHandler, InviteUserCmdHandler, InviteReactionCmdHandler, CreateMeetingCmdHandler, MeetingApproveCmdHandle, InviteToMeetingCmdHandler, MeetingInviteReactionCmdHandler, AddDaughterTeamCmdHandler, EditPolicyCmdHandler, NotificationReactionCmdHandler, AddChildTeamNotiifcationReactionCmdHandler
 from frontend_server import get_help_message
 
 import user_message_pb2 as um
@@ -62,6 +62,8 @@ ADD_CHILD_TEAM_CMD = "/add_child_team"
 EDIT_POLICY_CMD = "/edit_policy"
 POM_CMD = "/pom"
 AOM_CMD = "/aom"
+ACC_CHILD_CMD = "/acc_child"
+REJ_CHILD_CMD = "/rej_child"
 
 CREATING_TEAM_STATE = "creating_team"
 INVITING_MEMBERS_STATE = "inviting_members"
@@ -136,6 +138,9 @@ class BackendServiceStub:
         ]
 
     def SetGroupPolicy(self, msg):
+        return bs.SimpleResponse(ok=True)
+
+    def AddParentTeam(self, msg):
         return bs.SimpleResponse(ok=True)
 
 
@@ -657,7 +662,7 @@ def test_add_daughter_team_command_mention_one(fr):
     assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID) is None
     r1 = r.pop()
     assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID  # DEFAULT_CHILD_TEAM_ID
-    assert r1.text == f'[[{DEFAULT_USER_TEAM_OWNER_ID}]] wants to add {DEFAULT_PARENT_TEAM_NAME} to {DEFAULT_PARENT_TEAM_NAME} children\n\n/acc_child{DEFAULT_PARENT_TEAM_ID}_{DEFAULT_PARENT_TEAM_ID} -- accept\n/rej_child{DEFAULT_PARENT_TEAM_ID}_{DEFAULT_PARENT_TEAM_ID} -- reject'  # DEFAULT_CHILD_TEAM_ID DEFAULT_CHILD_TEAM_NAME
+    assert r1.text == f'[[{DEFAULT_USER_TEAM_OWNER_ID}]] wants to add {DEFAULT_PARENT_TEAM_NAME} to {DEFAULT_PARENT_TEAM_NAME} children\n\n{ACC_CHILD_CMD}{DEFAULT_PARENT_TEAM_ID}_{DEFAULT_PARENT_TEAM_ID} -- accept\n{REJ_CHILD_CMD}{DEFAULT_PARENT_TEAM_ID}_{DEFAULT_PARENT_TEAM_ID} -- reject'  # DEFAULT_CHILD_TEAM_ID DEFAULT_CHILD_TEAM_NAME
     r2 = r.pop()
     assert r2.user_id == DEFAULT_USER_TEAM_OWNER_ID
     assert r2.text == HELP_MESSAGE
@@ -760,3 +765,33 @@ def test_notification_reaction_command_aom(fr):
     r2 = r.pop()
     assert r2.user_id == DEFAULT_USER_TAGGED_ID
     assert r2.text == 'Understandable have a nice day'
+
+
+def test_add_child_team_notification_reaction_accept(fr):
+    actnr = AddChildTeamNotiifcationReactionCmdHandler(fr.states, fr.backend, fr.lines)
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TEAM_OWNER_ID,
+        text=f'{ACC_CHILD_CMD}{DEFAULT_PARENT_TEAM_ID}_{DEFAULT_PARENT_TEAM_ID}'
+    )
+    r = list(actnr.handle_request(msg))
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r1.text == f'[[{DEFAULT_USER_TEAM_OWNER_ID}]] team is now your child'
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r2.text == 'understandable'
+
+
+def test_add_child_team_notification_reaction_reject(fr):
+    actnr = AddChildTeamNotiifcationReactionCmdHandler(fr.states, fr.backend, fr.lines)
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TEAM_OWNER_ID,
+        text=f'{REJ_CHILD_CMD}{DEFAULT_PARENT_TEAM_ID}_{DEFAULT_PARENT_TEAM_ID}'
+    )
+    r = list(actnr.handle_request(msg))
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r1.text == f'[[{DEFAULT_USER_TEAM_OWNER_ID}]] rejected child invitation'
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r2.text == 'understandable'

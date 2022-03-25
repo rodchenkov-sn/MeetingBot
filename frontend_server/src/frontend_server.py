@@ -453,21 +453,26 @@ class AddDaughterTeamCmdHandler(RequestHandler):
 
 
 class AddChildTeamNotiifcationReactionCmdHandler(RequestHandler):
+    def __init__(self, states, backend, lines):
+        super().__init__()
+        self.__states = states
+        self.__backend = backend
+        self.__lines = lines
+
     def handle_request(self, request) -> List[um.ServerResponse]:
-        return []
-        # uid = request.user_id
-        # text = str(request.text)
-        # teams = text[10:].split('_')
-        # cid = int(teams[0])
-        # pid = int(teams[1])
-        # oid = stub.GetGroupOwner(bs.EntityId(id=pid)).id
-        # ret = [um.ServerResponse(user_id=uid, text='understandable')]
-        # if text.startswith('/acc_child'):
-        #     stub.AddParentTeam(bs.Participating(object=pid, subject=cid))
-        #     ret.append(um.ServerResponse(user_id=oid, text=f'[[{uid}]] team is now your child'))
-        # else:
-        #     ret.append(um.ServerResponse(user_id=oid, text=f'[[{uid}]] rejected child invitation'))
-        # return ret
+        uid = request.user_id
+        text = str(request.text)
+        teams = text[10:].split('_')
+        cid = int(teams[0])
+        pid = int(teams[1])
+        oid = self.__backend.GetGroupOwner(bs.EntityId(id=pid)).id
+        ret = [um.ServerResponse(user_id=uid, text='understandable')]
+        if text.startswith('/acc_child'):
+            self.__backend.AddParentTeam(bs.Participating(object=pid, subject=cid))
+            ret.append(um.ServerResponse(user_id=oid, text=f'[[{uid}]] team is now your child'))
+        else:
+            ret.append(um.ServerResponse(user_id=oid, text=f'[[{uid}]] rejected child invitation'))
+        return ret
 
 
 class EditPolicyCmdHandler(RequestHandler):
@@ -792,8 +797,8 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
             '/change_language': ChangeLanguageCmdHandler(),
             '/aom': NotificationReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/pom': NotificationReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
-            '/acc_child': AddChildTeamNotiifcationReactionCmdHandler(),
-            '/rej_child': AddChildTeamNotiifcationReactionCmdHandler()
+            '/acc_child': AddChildTeamNotiifcationReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
+            '/rej_child': AddChildTeamNotiifcationReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo)
         })
 
         self.__states_handlers = StatesHandlers({
