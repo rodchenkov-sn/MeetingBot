@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from states import StateRepo
 from lines import LinesRepo
 
-from frontend_server import StartCmdHandler, CreateTeamCmdHandler, InviteUserCmdHandler, InviteReactionCmdHandler, CreateMeetingCmdHandler, MeetingApproveCmdHandle, InviteToMeetingCmdHandler, MeetingInviteReactionCmdHandler, AddDaughterTeamCmdHandler
+from frontend_server import StartCmdHandler, CreateTeamCmdHandler, InviteUserCmdHandler, InviteReactionCmdHandler, CreateMeetingCmdHandler, MeetingApproveCmdHandle, InviteToMeetingCmdHandler, MeetingInviteReactionCmdHandler, AddDaughterTeamCmdHandler, EditPolicyCmdHandler
 from frontend_server import get_help_message
 
 import user_message_pb2 as um
@@ -59,6 +59,7 @@ INVITE_TO_MEETING_CMD = "/invite_to_meeting"
 ACCEPT_MEETING_INVITE_CMD = "/accept_meeting_invite"
 REJECT_MEETING_INVITE_CMD = "/reject_meeting_invite"
 ADD_CHILD_TEAM_CMD = "/add_child_team"
+EDIT_POLICY_CMD = "/edit_policy"
 
 CREATING_TEAM_STATE = "creating_team"
 INVITING_MEMBERS_STATE = "inviting_members"
@@ -67,6 +68,7 @@ SETTING_MEETING_TIME_STATE = "setting_meeting_time"
 INVITING_TO_MEETING_STATE = "inviting_to_meeting"
 SEARCHING_CHILD_TEAM_STATE = "searching_child_team"
 ADDING_CHILD_TEAM_STATE = "adding_child_team"
+EDITING_POLICY_STATE = "editing_policy"
 
 
 class BackendServiceStub:
@@ -130,6 +132,9 @@ class BackendServiceStub:
             bs.NamedInfo(id=DEFAULT_PARENT_TEAM_ID, name=DEFAULT_PARENT_TEAM_NAME),
             bs.NamedInfo(id=DEFAULT_CHILD_TEAM_ID, name=DEFAULT_CHILD_TEAM_NAME)
         ]
+
+    def SetGroupPolicy(self, msg):
+        return bs.SimpleResponse(ok=True)
 
 
 class FrontendResources:
@@ -657,3 +662,69 @@ def test_add_daughter_team_command_mention_one(fr):
     r3 = r.pop()
     assert r3.user_id == DEFAULT_USER_TEAM_OWNER_ID
     assert r3.text == 'invitation was sent'
+
+
+def test_edit_policy_command(fr):
+    eph = EditPolicyCmdHandler(fr.states, fr.backend, fr.lines)
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TEAM_OWNER_ID,
+        text=f'{EDIT_POLICY_CMD}'
+    )
+    edit_policy_edit_of = fr.lines.get_line('edit_policy_edit_of', DEFAULT_USER_TEAM_OWNER_ID)
+    rmsg = [
+        f'{EDIT_POLICY_CMD}{DEFAULT_PARENT_TEAM_ID} -- {edit_policy_edit_of} {DEFAULT_PARENT_TEAM_NAME}\n',
+        f'{EDIT_POLICY_CMD}{DEFAULT_CHILD_TEAM_ID} -- {edit_policy_edit_of} {DEFAULT_CHILD_TEAM_NAME}\n'
+    ]
+    r = list(eph.handle_request(msg))
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r1.text in rmsg
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r2.text in rmsg
+
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TEAM_OWNER_ID,
+        text=f'{EDIT_POLICY_CMD}{DEFAULT_PARENT_TEAM_ID}'
+    )
+    r = list(eph.handle_request(msg))
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).action == EDITING_POLICY_STATE
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument == DEFAULT_PARENT_TEAM_ID
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    edit_policy_propagate_admin = fr.lines.get_line('edit_policy_propagate_admin', DEFAULT_USER_TEAM_OWNER_ID)
+    assert r1.text == f'\n5. {edit_policy_propagate_admin}: {True}'
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    edit_policy_parent_visible = fr.lines.get_line('edit_policy_parent_visible', DEFAULT_USER_TEAM_OWNER_ID)
+    assert r2.text == f'\n4. {edit_policy_parent_visible}: {True}'
+    r3 = r.pop()
+    assert r3.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    edit_policy_propagate_policy = fr.lines.get_line('edit_policy_propagate_policy', DEFAULT_USER_TEAM_OWNER_ID)
+    assert r3.text == f'\n3. {edit_policy_propagate_policy}: {True}'
+    r4 = r.pop()
+    assert r4.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    edit_policy_need_approve = fr.lines.get_line('edit_policy_need_approve', DEFAULT_USER_TEAM_OWNER_ID)
+    assert r4.text == f'\n2. {edit_policy_need_approve}: {True}'
+    r5 = r.pop()
+    assert r5.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    edit_policy_allow_meetings = fr.lines.get_line('edit_policy_allow_meetings', DEFAULT_USER_TEAM_OWNER_ID)
+    assert r5.text == f'\n1. {edit_policy_allow_meetings}: {True}'
+    r6 = r.pop()
+    assert r6.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    edit_policy_enter_one_zero = fr.lines.get_line('edit_policy_enter_one_zero', DEFAULT_USER_TEAM_OWNER_ID)
+    assert r6.text == f'{edit_policy_enter_one_zero}:'
+
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TEAM_OWNER_ID,
+        text="0 0 0 0 0"
+    )
+    r = list(eph.handle_request(msg))
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID) is None
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r1.text == HELP_MESSAGE
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    edit_policy_policy_updated = fr.lines.get_line('edit_policy_policy_updated', DEFAULT_USER_TEAM_OWNER_ID)
+    assert r2.text == f'{edit_policy_policy_updated}'

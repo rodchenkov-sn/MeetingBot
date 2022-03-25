@@ -466,54 +466,57 @@ class AddChildTeamNotiifcationReactionCmdHandler(RequestHandler):
 
 
 class EditPolicyCmdHandler(RequestHandler):
+    def __init__(self, states, backend, lines):
+        super().__init__()
+        self.__states = states
+        self.__backend = backend
+        self.__lines = lines
+
     def handle_request(self, request) -> List[um.ServerResponse]:
-        return []
-        # uid = request.user_id
-        # text = request.text
-        # state = stateRepo.get_state(uid)
-        # if text == '/edit_policy':
-        #     msg = ''
-        #     teams = stub.GetOwnedTeams(bs.EntityId(id=uid))
-        #     edit_policy_edit_of = linesRepo.get_line('edit_policy_edit_of', uid)
-        #     for team in teams:
-        #         msg += f'/edit_policy{team.id} -- {edit_policy_edit_of} {team.name}\n'
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=msg)
-        #     ]
-        # elif state is None:
-        #     team_id = int(text[12:])
-        #     stateRepo.set_state(uid, State('editing_policy', team_id))
-        #     group_policy = stub.GetGroupPolicy(bs.EntityId(id=team_id))
-        #     edit_policy_enter_one_zero = linesRepo.get_line('edit_policy_enter_one_zero', uid)
-        #     edit_policy_allow_meetings = linesRepo.get_line('edit_policy_allow_meetings', uid)
-        #     edit_policy_need_approve = linesRepo.get_line('edit_policy_need_approve', uid)
-        #     edit_policy_propagate_policy = linesRepo.get_line('edit_policy_propagate_policy', uid)
-        #     edit_policy_parent_visible = linesRepo.get_line('edit_policy_parent_visible', uid)
-        #     edit_policy_propagate_admin = linesRepo.get_line('edit_policy_propagate_admin', uid)
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'{edit_policy_enter_one_zero}:'),
-        #         um.ServerResponse(user_id=uid, text=f'\n1. {edit_policy_allow_meetings}: {group_policy.allowUsersToCreateMeetings}'),
-        #         um.ServerResponse(user_id=uid, text=f'\n2. {edit_policy_need_approve}: {group_policy.needApproveForMeetingCreation}'),
-        #         um.ServerResponse(user_id=uid, text=f'\n3. {edit_policy_propagate_policy}: {group_policy.propagatePolicy}'),
-        #         um.ServerResponse(user_id=uid, text=f'\n4. {edit_policy_parent_visible}: {group_policy.parentVisible}'),
-        #         um.ServerResponse(user_id=uid, text=f'\n5. {edit_policy_propagate_admin}: {group_policy.propagateAdmin}')
-        #     ]
-        # else:
-        #     team_id = state.argument
-        #     stateRepo.clear_state(uid)
-        #     policy_parameters = re.split(r' ', text)
-        #     stub.SetGroupPolicy(bs.TeamPolicy(
-        #         groupId=team_id,
-        #         allowUsersToCreateMeetings=bool(int(policy_parameters[0])),
-        #         needApproveForMeetingCreation=bool(int(policy_parameters[1])),
-        #         propagatePolicy=bool(int(policy_parameters[2])),
-        #         parentVisible=bool(int(policy_parameters[3])),
-        #         propagateAdmin=bool(int(policy_parameters[4]))))
-        #     edit_policy_policy_updated = linesRepo.get_line('edit_policy_policy_updated', uid)
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'{edit_policy_policy_updated}'),
-        #         get_help_message(uid)
-        #     ]
+        uid = request.user_id
+        text = request.text
+        state = self.__states.get_state(uid)
+        if text == '/edit_policy':
+            response = []
+            teams = self.__backend.GetOwnedTeams(bs.EntityId(id=uid))
+            edit_policy_edit_of = self.__lines.get_line('edit_policy_edit_of', uid)
+            for team in teams:
+                response.append(um.ServerResponse(user_id=uid, text=f'/edit_policy{team.id} -- {edit_policy_edit_of} {team.name}\n'))
+            return response
+        elif state is None:
+            team_id = int(text[12:])
+            self.__states.set_state(uid, State('editing_policy', team_id))
+            group_policy = self.__backend.GetGroupPolicy(bs.EntityId(id=team_id))
+            edit_policy_enter_one_zero = self.__lines.get_line('edit_policy_enter_one_zero', uid)
+            edit_policy_allow_meetings = self.__lines.get_line('edit_policy_allow_meetings', uid)
+            edit_policy_need_approve = self.__lines.get_line('edit_policy_need_approve', uid)
+            edit_policy_propagate_policy = self.__lines.get_line('edit_policy_propagate_policy', uid)
+            edit_policy_parent_visible = self.__lines.get_line('edit_policy_parent_visible', uid)
+            edit_policy_propagate_admin = self.__lines.get_line('edit_policy_propagate_admin', uid)
+            return [
+                um.ServerResponse(user_id=uid, text=f'{edit_policy_enter_one_zero}:'),
+                um.ServerResponse(user_id=uid, text=f'\n1. {edit_policy_allow_meetings}: {group_policy.allowUsersToCreateMeetings}'),
+                um.ServerResponse(user_id=uid, text=f'\n2. {edit_policy_need_approve}: {group_policy.needApproveForMeetingCreation}'),
+                um.ServerResponse(user_id=uid, text=f'\n3. {edit_policy_propagate_policy}: {group_policy.propagatePolicy}'),
+                um.ServerResponse(user_id=uid, text=f'\n4. {edit_policy_parent_visible}: {group_policy.parentVisible}'),
+                um.ServerResponse(user_id=uid, text=f'\n5. {edit_policy_propagate_admin}: {group_policy.propagateAdmin}')
+            ]
+        else:
+            team_id = state.argument
+            self.__states.clear_state(uid)
+            policy_parameters = re.split(r' ', text)
+            self.__backend.SetGroupPolicy(bs.TeamPolicy(
+                groupId=team_id,
+                allowUsersToCreateMeetings=bool(int(policy_parameters[0])),
+                needApproveForMeetingCreation=bool(int(policy_parameters[1])),
+                propagatePolicy=bool(int(policy_parameters[2])),
+                parentVisible=bool(int(policy_parameters[3])),
+                propagateAdmin=bool(int(policy_parameters[4]))))
+            edit_policy_policy_updated = self.__lines.get_line('edit_policy_policy_updated', uid)
+            return [
+                um.ServerResponse(user_id=uid, text=f'{edit_policy_policy_updated}'),
+                get_help_message(uid, self.__lines)
+            ]
 
 
 class AddToMeetingCmdHandler(RequestHandler):
@@ -772,7 +775,7 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
             '/accept_meeting_invite': MeetingInviteReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/reject_meeting_invite': MeetingInviteReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/add_child_team': AddDaughterTeamCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
-            '/edit_policy': EditPolicyCmdHandler(),
+            '/edit_policy': EditPolicyCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/add_to_meeting': AddToMeetingCmdHandler(),
             '/update_meeting_time': UpdateMeetingTimeCmdHandler(),
             '/get_agenda': GetAgendaCmdHandler(),
@@ -796,7 +799,7 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
             'inviting_to_meeting': InviteToMeetingCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             'searching_child_team': AddDaughterTeamCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             'adding_child_team': AddDaughterTeamCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
-            'editing_policy': EditPolicyCmdHandler(),
+            'editing_policy': EditPolicyCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             'adding_to_meeting': AddToMeetingCmdHandler(),
             'updating_meeting_time': UpdateMeetingTimeCmdHandler(),
             'authenticating_gcal': GCalAuthCmdHandler(),
