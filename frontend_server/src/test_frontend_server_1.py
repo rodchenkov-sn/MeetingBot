@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from states import StateRepo
 from lines import LinesRepo
 
-from frontend_server import StartCmdHandler, CreateTeamCmdHandler, InviteUserCmdHandler, InviteReactionCmdHandler, CreateMeetingCmdHandler, MeetingApproveCmdHandle, InviteToMeetingCmdHandler, MeetingInviteReactionCmdHandler, AddDaughterTeamCmdHandler, EditPolicyCmdHandler
+from frontend_server import StartCmdHandler, CreateTeamCmdHandler, InviteUserCmdHandler, InviteReactionCmdHandler, CreateMeetingCmdHandler, MeetingApproveCmdHandle, InviteToMeetingCmdHandler, MeetingInviteReactionCmdHandler, AddDaughterTeamCmdHandler, EditPolicyCmdHandler, NotificationReactionCmdHandler
 from frontend_server import get_help_message
 
 import user_message_pb2 as um
@@ -60,6 +60,8 @@ ACCEPT_MEETING_INVITE_CMD = "/accept_meeting_invite"
 REJECT_MEETING_INVITE_CMD = "/reject_meeting_invite"
 ADD_CHILD_TEAM_CMD = "/add_child_team"
 EDIT_POLICY_CMD = "/edit_policy"
+POM_CMD = "/pom"
+AOM_CMD = "/aom"
 
 CREATING_TEAM_STATE = "creating_team"
 INVITING_MEMBERS_STATE = "inviting_members"
@@ -538,7 +540,7 @@ def test_meeting_invite_reaction_accept(fr):
     assert r3.text == f'{meeting_invite_reaction_you_accepted}'
     r4 = r.pop()
     assert r4.user_id == DEFAULT_USER_TAGGED_ID
-    assert r4.text == f'{DEFAULT_MEETING_DESC} in T - 5!\n\n/pom{DEFAULT_MEETING_ID} -- heading!\n/aom{DEFAULT_MEETING_ID} -- ignore'
+    assert r4.text == f'{DEFAULT_MEETING_DESC} in T - 5!\n\n{POM_CMD}{DEFAULT_MEETING_ID} -- heading!\n{AOM_CMD}{DEFAULT_MEETING_ID} -- ignore'
 
 
 def test_meeting_invite_reaction_reject(fr):
@@ -728,3 +730,33 @@ def test_edit_policy_command(fr):
     assert r2.user_id == DEFAULT_USER_TEAM_OWNER_ID
     edit_policy_policy_updated = fr.lines.get_line('edit_policy_policy_updated', DEFAULT_USER_TEAM_OWNER_ID)
     assert r2.text == f'{edit_policy_policy_updated}'
+
+
+def test_notification_reaction_command_pom(fr):
+    nrh = NotificationReactionCmdHandler(fr.states, fr.backend, fr.lines)
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TAGGED_ID,
+        text=f'{POM_CMD}{DEFAULT_MEETING_ID}'
+    )
+    r = list(nrh.handle_request(msg))
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r1.text == f'[[{DEFAULT_USER_TAGGED_ID}]] id heading to {DEFAULT_MEETING_DESC}'
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_USER_TAGGED_ID
+    assert r2.text == 'Understandable have a nice day'
+
+
+def test_notification_reaction_command_aom(fr):
+    nrh = NotificationReactionCmdHandler(fr.states, fr.backend, fr.lines)
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TAGGED_ID,
+        text=f'{AOM_CMD}{DEFAULT_MEETING_ID}'
+    )
+    r = list(nrh.handle_request(msg))
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r1.text == f'[[{DEFAULT_USER_TAGGED_ID}]] wont be at {DEFAULT_MEETING_DESC}'
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_USER_TAGGED_ID
+    assert r2.text == 'Understandable have a nice day'

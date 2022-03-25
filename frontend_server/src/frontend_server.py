@@ -377,18 +377,23 @@ class MeetingInviteReactionCmdHandler(RequestHandler):
 
 
 class NotificationReactionCmdHandler(RequestHandler):
+    def __init__(self, states, backend, lines):
+        super().__init__()
+        self.__states = states
+        self.__backend = backend
+        self.__lines = lines
+
     def handle_request(self, request) -> List[um.ServerResponse]:
-        return []
-        # uid = request.user_id
-        # text = str(request.text)
-        # mid = int(text[4:])
-        # minfo = stub.GetMeetingInfo(bs.EntityId(id=mid))
-        # ret = [um.ServerResponse(user_id=uid, text='Understandable have a nice day')]
-        # if text.startswith('/pom'):
-        #     ret.append(um.ServerResponse(user_id=minfo.creator, text=f'[[{uid}]] id heading to {minfo.desc}'))
-        # else:
-        #     ret.append(um.ServerResponse(user_id=minfo.creator, text=f'[[{uid}]] wont be at {minfo.desc}'))
-        # return ret
+        uid = request.user_id
+        text = str(request.text)
+        mid = int(text[4:])
+        minfo = self.__backend.GetMeetingInfo(bs.EntityId(id=mid))
+        ret = [um.ServerResponse(user_id=uid, text='Understandable have a nice day')]
+        if text.startswith('/pom'):
+            ret.append(um.ServerResponse(user_id=minfo.creator, text=f'[[{uid}]] id heading to {minfo.desc}'))
+        else:
+            ret.append(um.ServerResponse(user_id=minfo.creator, text=f'[[{uid}]] wont be at {minfo.desc}'))
+        return ret
 
 
 class AddDaughterTeamCmdHandler(RequestHandler):
@@ -785,8 +790,8 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
             '/upload_file': UploadFileCmdHandler(),
             '/get_files': GetUploadedFilesCmdHandler(),
             '/change_language': ChangeLanguageCmdHandler(),
-            '/aom': NotificationReactionCmdHandler(),
-            '/pom': NotificationReactionCmdHandler(),
+            '/aom': NotificationReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
+            '/pom': NotificationReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/acc_child': AddChildTeamNotiifcationReactionCmdHandler(),
             '/rej_child': AddChildTeamNotiifcationReactionCmdHandler()
         })
