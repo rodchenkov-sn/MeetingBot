@@ -104,7 +104,6 @@ class InviteUserCmdHandler(RequestHandler):
         self.__backend = backend
         self.__lines = lines
 
-
     def handle_request(self, request) -> List[um.ServerResponse]:
         uid = request.user_id
         text = request.text
@@ -143,27 +142,32 @@ class InviteUserCmdHandler(RequestHandler):
 
 
 class InviteReactionCmdHandler(RequestHandler):
+    def __init__(self, states, backend, lines):
+        super().__init__()
+        self.__states = states
+        self.__backend = backend
+        self.__lines = lines
+
     def handle_request(self, request) -> List[um.ServerResponse]:
-        return []
-        # uid = request.user_id
-        # text = request.text
-        # group_id = int(text[14:])
-        # owner_id = stub.GetGroupOwner(bs.EntityId(id=group_id)).id
-        # if text.startswith('/accept_invite'):
-        #     stub.AddTeamMember(bs.Participating(object=group_id, subject=uid))
-        #     invite_reaction_accepted = linesRepo.get_line('invite_reaction_accepted', uid)
-        #     invite_reaction_accepted_invitation = linesRepo.get_line('invite_reaction_accepted_invitation', owner_id)
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'{invite_reaction_accepted}!'),
-        #         um.ServerResponse(user_id=owner_id, text=f'[[{uid}]] {invite_reaction_accepted_invitation}')
-        #     ]
-        # else:
-        #     invite_reaction_rejected = linesRepo.get_line('invite_reaction_rejected', uid)
-        #     invite_reaction_rejected_invitation = linesRepo.get_line('invite_reaction_rejected_invitation', owner_id)
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'{invite_reaction_rejected}!'),
-        #         um.ServerResponse(user_id=owner_id, text=f'[[{uid}]] {invite_reaction_rejected_invitation}')
-        #     ]
+        uid = request.user_id
+        text = request.text
+        group_id = int(text[14:])
+        owner_id = self.__backend.GetGroupOwner(bs.EntityId(id=group_id)).id
+        if text.startswith('/accept_invite'):
+            self.__backend.AddTeamMember(bs.Participating(object=group_id, subject=uid))
+            invite_reaction_accepted = self.__lines.get_line('invite_reaction_accepted', uid)
+            invite_reaction_accepted_invitation = self.__lines.get_line('invite_reaction_accepted_invitation', owner_id)
+            return [
+                um.ServerResponse(user_id=uid, text=f'{invite_reaction_accepted}!'),
+                um.ServerResponse(user_id=owner_id, text=f'[[{uid}]] {invite_reaction_accepted_invitation}')
+            ]
+        else:
+            invite_reaction_rejected = self.__lines.get_line('invite_reaction_rejected', uid)
+            invite_reaction_rejected_invitation = self.__lines.get_line('invite_reaction_rejected_invitation', owner_id)
+            return [
+                um.ServerResponse(user_id=uid, text=f'{invite_reaction_rejected}!'),
+                um.ServerResponse(user_id=owner_id, text=f'[[{uid}]] {invite_reaction_rejected_invitation}')
+            ]
 
 
 class CreateMeetingCmdHandler(RequestHandler):
@@ -740,8 +744,8 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
             '/help': StartCmdHandler(self.__lines_repo),
             '/create_team': CreateTeamCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/invite_member': InviteUserCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
-            '/accept_invite': InviteReactionCmdHandler(),
-            '/reject_invite': InviteReactionCmdHandler(),
+            '/accept_invite': InviteReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
+            '/reject_invite': InviteReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/create_meeting': CreateMeetingCmdHandler(),
             '/approve_meeting': MeetingApproveCmdHandle(),
             '/reject_meeting': MeetingApproveCmdHandle(),

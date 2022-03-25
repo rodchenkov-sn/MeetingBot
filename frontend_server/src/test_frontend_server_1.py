@@ -2,7 +2,7 @@ import pytest
 
 from states import StateRepo
 from lines import LinesRepo
-from frontend_server import StartCmdHandler, CreateTeamCmdHandler, InviteUserCmdHandler
+from frontend_server import StartCmdHandler, CreateTeamCmdHandler, InviteUserCmdHandler, InviteReactionCmdHandler
 from frontend_server import get_help_message
 
 import user_message_pb2 as um
@@ -32,6 +32,8 @@ HELP_MESSAGE = f"/create_team - to add team\n" \
 START_CMD = "/start"
 CREATE_TEAM_CMD = "/create_team"
 INVITE_MEMBER_CMD = "/invite_member"
+ACCEPT_INVITE_CMD = "/accept_invite"
+REJECT_INVITE_CMD = "/reject_invite"
 
 CREATING_TEAM_STATE = "creating_team"
 INVITING_MEMBERS_STATE = "inviting_members"
@@ -47,6 +49,11 @@ class BackendServiceStub:
     def GetTeamInfo(self, msg):
         return bs.NamedInfo(id=DEFAULT_TEAM_ID, name=DEFAULT_TEAM_NAME)
 
+    def GetGroupOwner(self, msg):
+        return bs.EntityId(id=DEFAULT_USER_ID)
+
+    def AddTeamMember(self, msg):
+        pass
 
 class FrontendResources:
     def __init__(self, states: StateRepo, backend: BackendServiceStub, lines: LinesRepo):
@@ -139,8 +146,40 @@ def test_invite_user_command(fr):
     invite_user_by = fr.lines.get_line('invite_user_by', DEFAULT_TAGGED_USER_ID)
     invite_user_accept = fr.lines.get_line('invite_user_accept', DEFAULT_TAGGED_USER_ID)
     invite_user_reject = fr.lines.get_line('invite_user_reject', DEFAULT_TAGGED_USER_ID)
-    invite_msg = f'{invite_user_you_were_invited} {DEFAULT_TEAM_NAME} {invite_user_by} [[{DEFAULT_USER_ID}]]\n\n/accept_invite{DEFAULT_TEAM_ID} -- {invite_user_accept}\n/reject_invite{DEFAULT_TEAM_ID} -- {invite_user_reject}'
+    invite_msg = f'{invite_user_you_were_invited} {DEFAULT_TEAM_NAME} {invite_user_by} [[{DEFAULT_USER_ID}]]\n\n{ACCEPT_INVITE_CMD}{DEFAULT_TEAM_ID} -- {invite_user_accept}\n{REJECT_INVITE_CMD}{DEFAULT_TEAM_ID} -- {invite_user_reject}'
     assert r3.user_id == DEFAULT_TAGGED_USER_ID
     assert r3.text == invite_msg
 
 
+def test_invite_reaction_command_when_accepted(fr):
+    irh = InviteReactionCmdHandler(fr.states, fr.backend, fr.lines)
+    msg = um.UserMessage(
+        user_id=DEFAULT_TAGGED_USER_ID,
+        text=f"{ACCEPT_INVITE_CMD}{DEFAULT_TEAM_ID}"
+    )
+    r = list(irh.handle_request(msg))
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_ID
+    invite_reaction_accepted_invitation = fr.lines.get_line('invite_reaction_accepted_invitation', DEFAULT_USER_ID)
+    assert r1.text == f'[[{DEFAULT_TAGGED_USER_ID}]] {invite_reaction_accepted_invitation}'
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_TAGGED_USER_ID
+    invite_reaction_accepted = fr.lines.get_line('invite_reaction_accepted', DEFAULT_TAGGED_USER_ID)
+    assert r2.text == f"{invite_reaction_accepted}!"
+
+
+def test_invite_reaction_command_when_rejected(fr):
+    irh = InviteReactionCmdHandler(fr.states, fr.backend, fr.lines)
+    msg = um.UserMessage(
+        user_id=DEFAULT_TAGGED_USER_ID,
+        text=f"{REJECT_INVITE_CMD}{DEFAULT_TEAM_ID}"
+    )
+    r = list(irh.handle_request(msg))
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_ID
+    invite_reaction_rejected_invitation = fr.lines.get_line('invite_reaction_rejected_invitation', DEFAULT_USER_ID)
+    assert r1.text == f'[[{DEFAULT_TAGGED_USER_ID}]] {invite_reaction_rejected_invitation}'
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_TAGGED_USER_ID
+    invite_reaction_rejected = fr.lines.get_line('invite_reaction_rejected', DEFAULT_TAGGED_USER_ID)
+    assert r2.text == f'{invite_reaction_rejected}!'
