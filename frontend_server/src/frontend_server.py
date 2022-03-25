@@ -109,13 +109,11 @@ class InviteUserCmdHandler(RequestHandler):
         text = request.text
         state = self.__states.get_state(uid)
         if request.text == '/invite_member':
-            msg = ''
+            response = []
             teams = self.__backend.GetOwnedTeams(bs.EntityId(id=uid))
             for team in teams:
-                msg += f'/invite_member{team.id} -- {team.name}\n'
-            return [
-                um.ServerResponse(user_id=uid, text=msg)
-            ]
+                response.append(um.ServerResponse(user_id=uid, text=f'/invite_member{team.id} -- {team.name}\n'))
+            return response
         elif state is None:
             group_id = int(text[14:])
             self.__states.set_state(uid, State('inviting_members', group_id))
@@ -394,58 +392,59 @@ class NotificationReactionCmdHandler(RequestHandler):
 
 
 class AddDaughterTeamCmdHandler(RequestHandler):
+    def __init__(self, states, backend, lines):
+        super().__init__()
+        self.__states = states
+        self.__backend = backend
+        self.__lines = lines
+
     def handle_request(self, request) -> List[um.ServerResponse]:
-        return []
-        # uid = request.user_id
-        # text = str(request.text)
-        # state = stateRepo.get_state(uid)
-        # if text == '/add_child_team':
-        #     msg = 'choose new parent:\n'
-        #     teams = stub.GetOwnedTeams(bs.EntityId(id=uid))
-        #     add_daughter_team_add_to = linesRepo.get_line('add_daughter_team_add_to', uid)
-        #     for team in teams:
-        #         msg += f'/add_child_team{team.id} -- {add_daughter_team_add_to} {team.name}\n'
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=msg)
-        #     ]
-        # elif text.startswith('/add_child_team') and state is None:
-        #     parent_team_id = int(text[15:])
-        #     stateRepo.set_state(uid, State('searching_child_team', parent_team_id))
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'mention team owner:')
-        #     ]
-        # elif state is not None and state.action == 'searching_child_team':
-        #     mentioned_users = list(map(lambda m: int(m[2:len(m) - 2]), re.findall(r'\[\[\d+\]\]', text)))
-        #     msg = 'choose child team:\n'
-        #     if len(mentioned_users) == 1:
-        #         mus = mentioned_users[0]
-        #         owned_teams = stub.GetOwnedTeams(bs.EntityId(id=mus))
-        #         for team in owned_teams:
-        #             msg += f'/add_child_team{team.id} -- {team.name}\n'
-        #     else:
-        #         return [um.ServerResponse(user_id=uid, text='mention only one user pls')]
-        #     pid = state.argument
-        #     stateRepo.clear_state(uid)
-        #     stateRepo.set_state(uid, State('adding_child_team', pid, mus))
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=msg)
-        #     ]
-        # elif state is not None and state.action == 'adding_child_team' and text.startswith('/add_child_team'):
-        #     pid = state.argument
-        #     oid = state.argument2
-        #     stateRepo.clear_state(uid)
-        #     child_team_id = int(text[15:])
-        #     ctinfo = stub.GetTeamInfo(bs.EntityId(id=child_team_id))
-        #     ptinfo = stub.GetTeamInfo(bs.EntityId(id=pid))
-        #     return [
-        #         um.ServerResponse(user_id=uid, text='invitation was sent'),
-        #         get_help_message(uid),
-        #         um.ServerResponse(user_id=oid, text=f'[[{uid}]] wants to add {ctinfo.name} to {ptinfo.name} children\n\n/acc_child{ctinfo.id}_{ptinfo.id} -- accept\n/rej_child{ctinfo.id}_{ptinfo.id} -- reject')
-        #     ]
-        # else:
-        #     if state is not None:
-        #         stateRepo.clear_state(uid)
-        #     return [um.ServerResponse(user_id=uid, text='something went wront')]
+        uid = request.user_id
+        text = str(request.text)
+        state = self.__states.get_state(uid)
+        if text == '/add_child_team':
+            response = []
+            teams = self.__backend.GetOwnedTeams(bs.EntityId(id=uid))
+            add_daughter_team_add_to = self.__lines.get_line('add_daughter_team_add_to', uid)
+            for team in teams:
+                response.append(um.ServerResponse(user_id=uid, text=f'/add_child_team{team.id} -- {add_daughter_team_add_to} {team.name}\n'))
+            return response
+        elif text.startswith('/add_child_team') and state is None:
+            parent_team_id = int(text[15:])
+            self.__states.set_state(uid, State('searching_child_team', parent_team_id))
+            return [
+                um.ServerResponse(user_id=uid, text=f'mention team owner:')
+            ]
+        elif state is not None and state.action == 'searching_child_team':
+            mentioned_users = list(map(lambda m: int(m[2:len(m) - 2]), re.findall(r'\[\[\d+\]\]', text)))
+            response = []
+            if len(mentioned_users) == 1:
+                mus = mentioned_users[0]
+                owned_teams = self.__backend.GetOwnedTeams(bs.EntityId(id=mus))
+                for team in owned_teams:
+                    response.append(um.ServerResponse(user_id=uid, text=f'/add_child_team{team.id} -- {team.name}\n'))
+            else:
+                return [um.ServerResponse(user_id=uid, text='mention only one user pls')]
+            pid = state.argument
+            self.__states.clear_state(uid)
+            self.__states.set_state(uid, State('adding_child_team', pid, mus))
+            return response
+        elif state is not None and state.action == 'adding_child_team' and text.startswith('/add_child_team'):
+            pid = state.argument
+            oid = state.argument2
+            self.__states.clear_state(uid)
+            child_team_id = int(text[15:])
+            ctinfo = self.__backend.GetTeamInfo(bs.EntityId(id=child_team_id))
+            ptinfo = self.__backend.GetTeamInfo(bs.EntityId(id=pid))
+            return [
+                um.ServerResponse(user_id=uid, text='invitation was sent'),
+                get_help_message(uid, self.__lines),
+                um.ServerResponse(user_id=oid, text=f'[[{uid}]] wants to add {ctinfo.name} to {ptinfo.name} children\n\n/acc_child{ctinfo.id}_{ptinfo.id} -- accept\n/rej_child{ctinfo.id}_{ptinfo.id} -- reject')
+            ]
+        else:
+            if state is not None:
+                self.__states.clear_state(uid)
+            return [um.ServerResponse(user_id=uid, text='something went wront')]
 
 
 class AddChildTeamNotiifcationReactionCmdHandler(RequestHandler):
@@ -772,7 +771,7 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
             '/invite_to_meeting': InviteToMeetingCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/accept_meeting_invite': MeetingInviteReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/reject_meeting_invite': MeetingInviteReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
-            '/add_child_team': AddDaughterTeamCmdHandler(),
+            '/add_child_team': AddDaughterTeamCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/edit_policy': EditPolicyCmdHandler(),
             '/add_to_meeting': AddToMeetingCmdHandler(),
             '/update_meeting_time': UpdateMeetingTimeCmdHandler(),
@@ -795,8 +794,8 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
             'setting_meeting_desc': CreateMeetingCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             'setting_meeting_time': CreateMeetingCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             'inviting_to_meeting': InviteToMeetingCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
-            'searching_child_team': AddDaughterTeamCmdHandler(),
-            'adding_child_team': AddDaughterTeamCmdHandler(),
+            'searching_child_team': AddDaughterTeamCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
+            'adding_child_team': AddDaughterTeamCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             'editing_policy': EditPolicyCmdHandler(),
             'adding_to_meeting': AddToMeetingCmdHandler(),
             'updating_meeting_time': UpdateMeetingTimeCmdHandler(),

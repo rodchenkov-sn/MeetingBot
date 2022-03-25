@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from states import StateRepo
 from lines import LinesRepo
 
-from frontend_server import StartCmdHandler, CreateTeamCmdHandler, InviteUserCmdHandler, InviteReactionCmdHandler, CreateMeetingCmdHandler, MeetingApproveCmdHandle, InviteToMeetingCmdHandler, MeetingInviteReactionCmdHandler
+from frontend_server import StartCmdHandler, CreateTeamCmdHandler, InviteUserCmdHandler, InviteReactionCmdHandler, CreateMeetingCmdHandler, MeetingApproveCmdHandle, InviteToMeetingCmdHandler, MeetingInviteReactionCmdHandler, AddDaughterTeamCmdHandler
 from frontend_server import get_help_message
 
 import user_message_pb2 as um
@@ -15,8 +15,10 @@ import backend_service_pb2 as bs
 DEFAULT_USER_TEAM_OWNER_ID = 1
 DEFAULT_USER_TAGGED_ID = 2
 
-DEFAULT_TEAM_ID = 1
-DEFAULT_TEAM_NAME = "team1"
+DEFAULT_PARENT_TEAM_ID = 1
+DEFAULT_PARENT_TEAM_NAME = "parent-team"
+DEFAULT_CHILD_TEAM_ID = 2
+DEFAULT_CHILD_TEAM_NAME = "child-team"
 
 DEFAULT_MEETING_ID = 1
 DEFAULT_MEETING_DESC = "meeting1"
@@ -56,12 +58,15 @@ REJECT_MEETING_CMD = "/reject_meeting"
 INVITE_TO_MEETING_CMD = "/invite_to_meeting"
 ACCEPT_MEETING_INVITE_CMD = "/accept_meeting_invite"
 REJECT_MEETING_INVITE_CMD = "/reject_meeting_invite"
+ADD_CHILD_TEAM_CMD = "/add_child_team"
 
 CREATING_TEAM_STATE = "creating_team"
 INVITING_MEMBERS_STATE = "inviting_members"
 SETTING_MEETING_DESC_STATE = "setting_meeting_desc"
 SETTING_MEETING_TIME_STATE = "setting_meeting_time"
 INVITING_TO_MEETING_STATE = "inviting_to_meeting"
+SEARCHING_CHILD_TEAM_STATE = "searching_child_team"
+ADDING_CHILD_TEAM_STATE = "adding_child_team"
 
 
 class BackendServiceStub:
@@ -69,10 +74,10 @@ class BackendServiceStub:
         pass
 
     def GetOwnedTeams(self, msg):
-        yield bs.NamedInfo(id=DEFAULT_TEAM_ID, name=DEFAULT_TEAM_NAME)
+        yield bs.NamedInfo(id=DEFAULT_PARENT_TEAM_ID, name=DEFAULT_PARENT_TEAM_NAME)
 
     def GetTeamInfo(self, msg):
-        return bs.NamedInfo(id=DEFAULT_TEAM_ID, name=DEFAULT_TEAM_NAME)
+        return bs.NamedInfo(id=DEFAULT_PARENT_TEAM_ID, name=DEFAULT_PARENT_TEAM_NAME)
 
     def GetGroupOwner(self, msg):
         return bs.EntityId(id=DEFAULT_USER_TEAM_OWNER_ID)
@@ -81,7 +86,7 @@ class BackendServiceStub:
         pass
 
     def GetGroupsToCreateMeeting(self, msg):
-        yield bs.NamedInfo(id=DEFAULT_TEAM_ID, name=DEFAULT_TEAM_NAME)
+        yield bs.NamedInfo(id=DEFAULT_PARENT_TEAM_ID, name=DEFAULT_PARENT_TEAM_NAME)
 
     def CreateMeeting(self, msg):
         return bs.EntityId(id=DEFAULT_MEETING_ID)
@@ -91,7 +96,7 @@ class BackendServiceStub:
 
     def GetGroupPolicy(self, msg):
         return bs.TeamPolicy(
-            groupId=DEFAULT_TEAM_ID,
+            groupId=DEFAULT_PARENT_TEAM_ID,
             allowUsersToCreateMeetings=DEFAULT_POLICY_ALLOW_USERS_TO_CREATE_MEETINGS,
             needApproveForMeetingCreation=DEFAULT_POLICY_NEED_APPROVE_FOR_MEETING_CREATION,
             propagatePolicy=DEFAULT_PROPAGATE_POLICY,
@@ -106,7 +111,7 @@ class BackendServiceStub:
         return bs.MeetingInfo(
             id=DEFAULT_MEETING_ID,
             creator=DEFAULT_USER_TEAM_OWNER_ID,
-            team=DEFAULT_TEAM_ID,
+            team=DEFAULT_PARENT_TEAM_ID,
             desc=DEFAULT_MEETING_DESC,
             time=DEFAULT_MEETING_TIME_INT
         )
@@ -119,6 +124,12 @@ class BackendServiceStub:
 
     def AddParticipant(self, msg):
         return bs.SimpleResponse(ok=True)
+
+    def GetOwnedTeams(self, msg):
+        return [
+            bs.NamedInfo(id=DEFAULT_PARENT_TEAM_ID, name=DEFAULT_PARENT_TEAM_NAME),
+            bs.NamedInfo(id=DEFAULT_CHILD_TEAM_ID, name=DEFAULT_CHILD_TEAM_NAME)
+        ]
 
 
 class FrontendResources:
@@ -166,7 +177,7 @@ def test_create_team_command(fr):
 
     msg = um.UserMessage(
         user_id=DEFAULT_USER_TEAM_OWNER_ID,
-        text=DEFAULT_TEAM_NAME
+        text=DEFAULT_PARENT_TEAM_NAME
     )
     r = list(cth.handle_request(msg))
     assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID) is None
@@ -175,7 +186,7 @@ def test_create_team_command(fr):
     assert r1.text == HELP_MESSAGE
     r2 = r.pop()
     assert r2.user_id == DEFAULT_USER_TEAM_OWNER_ID
-    assert r2.text == f"{DEFAULT_TEAM_NAME} {fr.lines.get_line('create_team_team_created', DEFAULT_USER_TEAM_OWNER_ID)}!"
+    assert r2.text == f"{DEFAULT_PARENT_TEAM_NAME} {fr.lines.get_line('create_team_team_created', DEFAULT_USER_TEAM_OWNER_ID)}!"
 
 
 def test_invite_user_command(fr):
@@ -184,14 +195,21 @@ def test_invite_user_command(fr):
         user_id=DEFAULT_USER_TEAM_OWNER_ID,
         text=INVITE_MEMBER_CMD
     )
+    rmsg = [
+        f'{INVITE_MEMBER_CMD}{DEFAULT_PARENT_TEAM_ID} -- {DEFAULT_PARENT_TEAM_NAME}\n',
+        f'{INVITE_MEMBER_CMD}{DEFAULT_CHILD_TEAM_ID} -- {DEFAULT_CHILD_TEAM_NAME}\n'
+    ]
     r = list(iuh.handle_request(msg))
-    r = r.pop()
-    assert r.user_id == DEFAULT_USER_TEAM_OWNER_ID
-    assert r.text == f'{INVITE_MEMBER_CMD}{DEFAULT_TEAM_ID} -- {DEFAULT_TEAM_NAME}\n'
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r1.text in rmsg
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r2.text in rmsg
 
     msg = um.UserMessage(
         user_id=DEFAULT_USER_TEAM_OWNER_ID,
-        text=f'{INVITE_MEMBER_CMD}{DEFAULT_TEAM_ID}'
+        text=f'{INVITE_MEMBER_CMD}{DEFAULT_PARENT_TEAM_ID}'
     )
     r = list(iuh.handle_request(msg))
     r = r.pop()
@@ -216,7 +234,7 @@ def test_invite_user_command(fr):
     invite_user_by = fr.lines.get_line('invite_user_by', DEFAULT_USER_TAGGED_ID)
     invite_user_accept = fr.lines.get_line('invite_user_accept', DEFAULT_USER_TAGGED_ID)
     invite_user_reject = fr.lines.get_line('invite_user_reject', DEFAULT_USER_TAGGED_ID)
-    invite_msg = f'{invite_user_you_were_invited} {DEFAULT_TEAM_NAME} {invite_user_by} [[{DEFAULT_USER_TEAM_OWNER_ID}]]\n\n{ACCEPT_INVITE_CMD}{DEFAULT_TEAM_ID} -- {invite_user_accept}\n{REJECT_INVITE_CMD}{DEFAULT_TEAM_ID} -- {invite_user_reject}'
+    invite_msg = f'{invite_user_you_were_invited} {DEFAULT_PARENT_TEAM_NAME} {invite_user_by} [[{DEFAULT_USER_TEAM_OWNER_ID}]]\n\n{ACCEPT_INVITE_CMD}{DEFAULT_PARENT_TEAM_ID} -- {invite_user_accept}\n{REJECT_INVITE_CMD}{DEFAULT_PARENT_TEAM_ID} -- {invite_user_reject}'
     assert r3.user_id == DEFAULT_USER_TAGGED_ID
     assert r3.text == invite_msg
 
@@ -225,7 +243,7 @@ def test_invite_reaction_command_when_accepted(fr):
     irh = InviteReactionCmdHandler(fr.states, fr.backend, fr.lines)
     msg = um.UserMessage(
         user_id=DEFAULT_USER_TAGGED_ID,
-        text=f"{ACCEPT_INVITE_CMD}{DEFAULT_TEAM_ID}"
+        text=f"{ACCEPT_INVITE_CMD}{DEFAULT_PARENT_TEAM_ID}"
     )
     r = list(irh.handle_request(msg))
     r1 = r.pop()
@@ -242,7 +260,7 @@ def test_invite_reaction_command_when_rejected(fr):
     irh = InviteReactionCmdHandler(fr.states, fr.backend, fr.lines)
     msg = um.UserMessage(
         user_id=DEFAULT_USER_TAGGED_ID,
-        text=f"{REJECT_INVITE_CMD}{DEFAULT_TEAM_ID}"
+        text=f"{REJECT_INVITE_CMD}{DEFAULT_PARENT_TEAM_ID}"
     )
     r = list(irh.handle_request(msg))
     r1 = r.pop()
@@ -264,17 +282,17 @@ def test_create_meeting_command_invalid_time(fr):
     r = list(cmh.handle_request(msg))
     r = r.pop()
     assert r.user_id == DEFAULT_USER_TEAM_OWNER_ID
-    assert r.text == f'{CREATE_MEETING_CMD}{DEFAULT_TEAM_ID} -- {DEFAULT_TEAM_NAME}\n'
+    assert r.text == f'{CREATE_MEETING_CMD}{DEFAULT_PARENT_TEAM_ID} -- {DEFAULT_PARENT_TEAM_NAME}\n'
 
     msg = um.UserMessage(
         user_id=DEFAULT_USER_TEAM_OWNER_ID,
-        text=f"{CREATE_MEETING_CMD}{DEFAULT_TEAM_ID}"
+        text=f"{CREATE_MEETING_CMD}{DEFAULT_PARENT_TEAM_ID}"
     )
     r = list(cmh.handle_request(msg))
     r = r.pop()
     assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).action == SETTING_MEETING_DESC_STATE
     assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument == DEFAULT_MEETING_ID
-    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument2 == DEFAULT_TEAM_ID
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument2 == DEFAULT_PARENT_TEAM_ID
     assert r.user_id == DEFAULT_USER_TEAM_OWNER_ID
     create_meeting_enter_description = fr.lines.get_line('create_meeting_enter_description', DEFAULT_USER_TEAM_OWNER_ID)
     assert r.text == f'{create_meeting_enter_description}:'
@@ -287,7 +305,7 @@ def test_create_meeting_command_invalid_time(fr):
     r = r.pop()
     assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).action == SETTING_MEETING_TIME_STATE
     assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument == DEFAULT_MEETING_ID
-    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument2 == DEFAULT_TEAM_ID
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument2 == DEFAULT_PARENT_TEAM_ID
     assert r.user_id == DEFAULT_USER_TEAM_OWNER_ID
     create_meeting_enter_datetime = fr.lines.get_line('create_meeting_enter_datetime', DEFAULT_USER_TEAM_OWNER_ID)
     assert r.text == f'{create_meeting_enter_datetime}:'
@@ -311,17 +329,17 @@ def test_create_meeting_command_valid_time_team_owner(fr):
     r = list(cmh.handle_request(msg))
     r = r.pop()
     assert r.user_id == DEFAULT_USER_TEAM_OWNER_ID
-    assert r.text == f'{CREATE_MEETING_CMD}{DEFAULT_TEAM_ID} -- {DEFAULT_TEAM_NAME}\n'
+    assert r.text == f'{CREATE_MEETING_CMD}{DEFAULT_PARENT_TEAM_ID} -- {DEFAULT_PARENT_TEAM_NAME}\n'
 
     msg = um.UserMessage(
         user_id=DEFAULT_USER_TEAM_OWNER_ID,
-        text=f"{CREATE_MEETING_CMD}{DEFAULT_TEAM_ID}"
+        text=f"{CREATE_MEETING_CMD}{DEFAULT_PARENT_TEAM_ID}"
     )
     r = list(cmh.handle_request(msg))
     r = r.pop()
     assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).action == SETTING_MEETING_DESC_STATE
     assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument == DEFAULT_MEETING_ID
-    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument2 == DEFAULT_TEAM_ID
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument2 == DEFAULT_PARENT_TEAM_ID
     assert r.user_id == DEFAULT_USER_TEAM_OWNER_ID
     create_meeting_enter_description = fr.lines.get_line('create_meeting_enter_description', DEFAULT_USER_TEAM_OWNER_ID)
     assert r.text == f'{create_meeting_enter_description}:'
@@ -334,7 +352,7 @@ def test_create_meeting_command_valid_time_team_owner(fr):
     r = r.pop()
     assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).action == SETTING_MEETING_TIME_STATE
     assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument == DEFAULT_MEETING_ID
-    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument2 == DEFAULT_TEAM_ID
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument2 == DEFAULT_PARENT_TEAM_ID
     assert r.user_id == DEFAULT_USER_TEAM_OWNER_ID
     create_meeting_enter_datetime = fr.lines.get_line('create_meeting_enter_datetime', DEFAULT_USER_TEAM_OWNER_ID)
     assert r.text == f'{create_meeting_enter_datetime}:'
@@ -364,17 +382,17 @@ def test_create_meeting_command_valid_time_need_approve(fr):
     r = list(cmh.handle_request(msg))
     r = r.pop()
     assert r.user_id == DEFAULT_USER_TAGGED_ID
-    assert r.text == f'{CREATE_MEETING_CMD}{DEFAULT_TEAM_ID} -- {DEFAULT_TEAM_NAME}\n'
+    assert r.text == f'{CREATE_MEETING_CMD}{DEFAULT_PARENT_TEAM_ID} -- {DEFAULT_PARENT_TEAM_NAME}\n'
 
     msg = um.UserMessage(
         user_id=DEFAULT_USER_TAGGED_ID,
-        text=f"{CREATE_MEETING_CMD}{DEFAULT_TEAM_ID}"
+        text=f"{CREATE_MEETING_CMD}{DEFAULT_PARENT_TEAM_ID}"
     )
     r = list(cmh.handle_request(msg))
     r = r.pop()
     assert fr.states.get_state(DEFAULT_USER_TAGGED_ID).action == SETTING_MEETING_DESC_STATE
     assert fr.states.get_state(DEFAULT_USER_TAGGED_ID).argument == DEFAULT_MEETING_ID
-    assert fr.states.get_state(DEFAULT_USER_TAGGED_ID).argument2 == DEFAULT_TEAM_ID
+    assert fr.states.get_state(DEFAULT_USER_TAGGED_ID).argument2 == DEFAULT_PARENT_TEAM_ID
     assert r.user_id == DEFAULT_USER_TAGGED_ID
     create_meeting_enter_description = fr.lines.get_line('create_meeting_enter_description', DEFAULT_USER_TAGGED_ID)
     assert r.text == f'{create_meeting_enter_description}:'
@@ -387,7 +405,7 @@ def test_create_meeting_command_valid_time_need_approve(fr):
     r = r.pop()
     assert fr.states.get_state(DEFAULT_USER_TAGGED_ID).action == SETTING_MEETING_TIME_STATE
     assert fr.states.get_state(DEFAULT_USER_TAGGED_ID).argument == DEFAULT_MEETING_ID
-    assert fr.states.get_state(DEFAULT_USER_TAGGED_ID).argument2 == DEFAULT_TEAM_ID
+    assert fr.states.get_state(DEFAULT_USER_TAGGED_ID).argument2 == DEFAULT_PARENT_TEAM_ID
     assert r.user_id == DEFAULT_USER_TAGGED_ID
     create_meeting_enter_datetime = fr.lines.get_line('create_meeting_enter_datetime', DEFAULT_USER_TAGGED_ID)
     assert r.text == f'{create_meeting_enter_datetime}:'
@@ -533,3 +551,109 @@ def test_meeting_invite_reaction_reject(fr):
     assert r2.user_id == DEFAULT_USER_TAGGED_ID
     meeting_invite_reaction_you_rejected = fr.lines.get_line('meeting_invite_reaction_you_rejected', DEFAULT_USER_TAGGED_ID)
     assert r2.text == f'{meeting_invite_reaction_you_rejected}'
+
+
+def test_add_daughter_team_command_mention_many(fr):
+    adth = AddDaughterTeamCmdHandler(fr.states, fr.backend, fr.lines)
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TEAM_OWNER_ID,
+        text=ADD_CHILD_TEAM_CMD
+    )
+    add_daughter_team_add_to = fr.lines.get_line('add_daughter_team_add_to', DEFAULT_USER_TEAM_OWNER_ID)
+    rmsg = [
+        f'{ADD_CHILD_TEAM_CMD}{DEFAULT_PARENT_TEAM_ID} -- {add_daughter_team_add_to} {DEFAULT_PARENT_TEAM_NAME}\n',
+        f'{ADD_CHILD_TEAM_CMD}{DEFAULT_CHILD_TEAM_ID} -- {add_daughter_team_add_to} {DEFAULT_CHILD_TEAM_NAME}\n'
+    ]
+    r = list(adth.handle_request(msg))
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r1.text in rmsg
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r2.text in rmsg
+
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TEAM_OWNER_ID,
+        text=f'{ADD_CHILD_TEAM_CMD}{DEFAULT_PARENT_TEAM_ID}'
+    )
+    r = list(adth.handle_request(msg))
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).action == SEARCHING_CHILD_TEAM_STATE
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument == DEFAULT_PARENT_TEAM_ID
+    r = r.pop()
+    assert r.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r.text == f'mention team owner:'
+
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TEAM_OWNER_ID,
+        text=f'[[{DEFAULT_USER_TEAM_OWNER_ID}]][[{DEFAULT_USER_TAGGED_ID}]]'
+    )
+    r = list(adth.handle_request(msg))
+    r = r.pop()
+    assert r.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r.text == 'mention only one user pls'
+
+
+def test_add_daughter_team_command_mention_one(fr):
+    adth = AddDaughterTeamCmdHandler(fr.states, fr.backend, fr.lines)
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TEAM_OWNER_ID,
+        text=ADD_CHILD_TEAM_CMD
+    )
+    add_daughter_team_add_to = fr.lines.get_line('add_daughter_team_add_to', DEFAULT_USER_TEAM_OWNER_ID)
+    rmsg = [
+        f'{ADD_CHILD_TEAM_CMD}{DEFAULT_PARENT_TEAM_ID} -- {add_daughter_team_add_to} {DEFAULT_PARENT_TEAM_NAME}\n',
+        f'{ADD_CHILD_TEAM_CMD}{DEFAULT_CHILD_TEAM_ID} -- {add_daughter_team_add_to} {DEFAULT_CHILD_TEAM_NAME}\n'
+    ]
+    r = list(adth.handle_request(msg))
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r1.text in rmsg
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r2.text in rmsg
+
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TEAM_OWNER_ID,
+        text=f'{ADD_CHILD_TEAM_CMD}{DEFAULT_PARENT_TEAM_ID}'
+    )
+    r = list(adth.handle_request(msg))
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).action == SEARCHING_CHILD_TEAM_STATE
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument == DEFAULT_PARENT_TEAM_ID
+    r = r.pop()
+    assert r.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r.text == f'mention team owner:'
+
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TEAM_OWNER_ID,
+        text=f'[[{DEFAULT_USER_TEAM_OWNER_ID}]]'
+    )
+    rmsg = [
+        f'{ADD_CHILD_TEAM_CMD}{DEFAULT_PARENT_TEAM_ID} -- {DEFAULT_PARENT_TEAM_NAME}\n',
+        f'{ADD_CHILD_TEAM_CMD}{DEFAULT_CHILD_TEAM_ID} -- {DEFAULT_CHILD_TEAM_NAME}\n'
+    ]
+    r = list(adth.handle_request(msg))
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r1.text in rmsg
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r2.text in rmsg
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).action == ADDING_CHILD_TEAM_STATE
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument == DEFAULT_PARENT_TEAM_ID
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID).argument2 == DEFAULT_USER_TEAM_OWNER_ID
+
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TEAM_OWNER_ID,
+        text=f'{ADD_CHILD_TEAM_CMD}{DEFAULT_PARENT_TEAM_ID}'  # DEFAULT_CHILD_TEAM_ID
+    )
+    r = list(adth.handle_request(msg))
+    assert fr.states.get_state(DEFAULT_USER_TEAM_OWNER_ID) is None
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID  # DEFAULT_CHILD_TEAM_ID
+    assert r1.text == f'[[{DEFAULT_USER_TEAM_OWNER_ID}]] wants to add {DEFAULT_PARENT_TEAM_NAME} to {DEFAULT_PARENT_TEAM_NAME} children\n\n/acc_child{DEFAULT_PARENT_TEAM_ID}_{DEFAULT_PARENT_TEAM_ID} -- accept\n/rej_child{DEFAULT_PARENT_TEAM_ID}_{DEFAULT_PARENT_TEAM_ID} -- reject'  # DEFAULT_CHILD_TEAM_ID DEFAULT_CHILD_TEAM_NAME
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r2.text == HELP_MESSAGE
+    r3 = r.pop()
+    assert r3.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    assert r3.text == 'invitation was sent'
