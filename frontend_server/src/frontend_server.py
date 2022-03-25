@@ -171,86 +171,91 @@ class InviteReactionCmdHandler(RequestHandler):
 
 
 class CreateMeetingCmdHandler(RequestHandler):
+    def __init__(self, states, backend, lines):
+        super().__init__()
+        self.__states = states
+        self.__backend = backend
+        self.__lines = lines
+
     def handle_request(self, request) -> List[um.ServerResponse]:
-        return []
-        # uid = request.user_id
-        # text = request.text
-        # state = stateRepo.get_state(uid)
-        # if text == '/create_meeting':
-        #     msg = ''
-        #     teams = stub.GetGroupsToCreateMeeting(bs.EntityId(id=uid))
-        #     for team in teams:
-        #         msg += f'/create_meeting{team.id} -- {team.name}\n'
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=msg)
-        #     ]
-        # elif state is None:
-        #     group_id = int(text[15:])
-        #     meeting_id = stub.CreateMeeting(bs.MeetingInfo(
-        #         id=-1,
-        #         creator=uid,
-        #         team=group_id,
-        #         desc='',
-        #         time=-1
-        #     )).id
-        #     stateRepo.set_state(uid, State('setting_meeting_desc', meeting_id, _arg2=group_id))
-        #     create_meeting_enter_description = linesRepo.get_line('create_meeting_enter_description', uid)
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'{create_meeting_enter_description}:')
-        #     ]
-        # elif state.action == 'setting_meeting_desc':
-        #     meeting_id = state.argument
-        #     stateRepo.set_state(uid, State('setting_meeting_time', state.argument, _arg2=state.argument2))
-        #     stub.UpdateMeetingInfo(bs.MeetingInfo(
-        #         id=meeting_id,
-        #         creator=-1,  # not important
-        #         team=-1,  # not important
-        #         desc=text,
-        #         time=-1
-        #     ))
-        #     create_meeting_enter_datetime = linesRepo.get_line('create_meeting_enter_datetime', uid)
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'{create_meeting_enter_datetime}:')
-        #     ]
-        # elif state.action == 'setting_meeting_time':
-        #     meeting_id = state.argument
-        #     group_id = state.argument2
-        #     try:
-        #         dt = datetime.strptime(text, '%d-%m-%Y %H:%M')
-        #     except:
-        #         return [
-        #             um.ServerResponse(user_id=uid, text=f'try again!')
-        #         ]
-        #     stateRepo.clear_state(uid)
-        #     stub.UpdateMeetingInfo(bs.MeetingInfo(
-        #         id=meeting_id,
-        #         creator=-1,  # not important
-        #         team=-1,  # not important
-        #         desc='',  # not important
-        #         time=int(dt.timestamp())
-        #     ))
-        #     group_owner = stub.GetGroupOwner(bs.EntityId(id=group_id)).id
-        #     group_policy = stub.GetGroupPolicy(bs.EntityId(id=group_id))
-        #     if uid == group_owner or not group_policy.needApproveForMeetingCreation:
-        #         stub.ApproveMeeting(bs.EntityId(id=meeting_id))
-        #         create_meeting_meeting_created = linesRepo.get_line('create_meeting_meeting_created', uid)
-        #         ret = [
-        #             um.ServerResponse(user_id=uid, text=f'{create_meeting_meeting_created}!')
-        #         ]
-        #         minfo = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
-        #         ret.append(um.ServerResponse(user_id=uid, text=f'{minfo.desc} in T - 5!', event_id=meeting_id, timestamp=int((dt - timedelta(minutes=5)).timestamp())))
-        #     else:
-        #         meeting_info = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
-        #         create_meeting_wait_approval = linesRepo.get_line('create_meeting_wait_approval', uid)
-        #         create_meeting_user = linesRepo.get_line('create_meeting_user', group_owner)
-        #         create_meeting_created_meeting = linesRepo.get_line('create_meeting_created_meeting', group_owner)
-        #         create_meeting_approve = linesRepo.get_line('create_meeting_approve', group_owner)
-        #         create_meeting_reject = linesRepo.get_line('create_meeting_reject', group_owner)
-        #         ret = [
-        #             um.ServerResponse(user_id=uid, text=f'{create_meeting_wait_approval}'),
-        #             um.ServerResponse(user_id=group_owner, text=f'{create_meeting_user} [[{uid}]] {create_meeting_created_meeting} {meeting_info.desc}\n/approve_meeting{meeting_id} -- {create_meeting_approve}\n/reject_meeting{meeting_id} -- {create_meeting_reject}')
-        #         ]
-        #     return ret
+        uid = request.user_id
+        text = request.text
+        state = self.__states.get_state(uid)
+        if text == '/create_meeting':
+            msg = ''
+            teams = self.__backend.GetGroupsToCreateMeeting(bs.EntityId(id=uid))
+            for team in teams:
+                msg += f'/create_meeting{team.id} -- {team.name}\n'
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
+        elif state is None:
+            group_id = int(text[15:])
+            meeting_id = self.__backend.CreateMeeting(bs.MeetingInfo(
+                id=-1,
+                creator=uid,
+                team=group_id,
+                desc='',
+                time=-1
+            )).id
+            self.__states.set_state(uid, State('setting_meeting_desc', meeting_id, _arg2=group_id))
+            create_meeting_enter_description = self.__lines.get_line('create_meeting_enter_description', uid)
+            return [
+                um.ServerResponse(user_id=uid, text=f'{create_meeting_enter_description}:')
+            ]
+        elif state.action == 'setting_meeting_desc':
+            meeting_id = state.argument
+            self.__states.set_state(uid, State('setting_meeting_time', state.argument, _arg2=state.argument2))
+            self.__backend.UpdateMeetingInfo(bs.MeetingInfo(
+                id=meeting_id,
+                creator=-1,  # not important
+                team=-1,  # not important
+                desc=text,
+                time=-1
+            ))
+            create_meeting_enter_datetime = self.__lines.get_line('create_meeting_enter_datetime', uid)
+            return [
+                um.ServerResponse(user_id=uid, text=f'{create_meeting_enter_datetime}:')
+            ]
+        elif state.action == 'setting_meeting_time':
+            meeting_id = state.argument
+            group_id = state.argument2
+            try:
+                dt = datetime.strptime(text, '%d-%m-%Y %H:%M')
+            except:
+                return [
+                    um.ServerResponse(user_id=uid, text=f'try again!')
+                ]
+            self.__states.clear_state(uid)
+            self.__backend.UpdateMeetingInfo(bs.MeetingInfo(
+                id=meeting_id,
+                creator=-1,  # not important
+                team=-1,  # not important
+                desc='',  # not important
+                time=int(dt.timestamp())
+            ))
+            group_owner = self.__backend.GetGroupOwner(bs.EntityId(id=group_id)).id
+            group_policy = self.__backend.GetGroupPolicy(bs.EntityId(id=group_id))
+            if uid == group_owner or not group_policy.needApproveForMeetingCreation:
+                self.__backend.ApproveMeeting(bs.EntityId(id=meeting_id))
+                create_meeting_meeting_created = self.__lines.get_line('create_meeting_meeting_created', uid)
+                ret = [
+                    um.ServerResponse(user_id=uid, text=f'{create_meeting_meeting_created}!')
+                ]
+                minfo = self.__backend.GetMeetingInfo(bs.EntityId(id=meeting_id))
+                ret.append(um.ServerResponse(user_id=uid, text=f'{minfo.desc} in T - 5!', event_id=meeting_id, timestamp=int((dt - timedelta(minutes=5)).timestamp())))
+            else:
+                meeting_info = self.__backend.GetMeetingInfo(bs.EntityId(id=meeting_id))
+                create_meeting_wait_approval = self.__lines.get_line('create_meeting_wait_approval', uid)
+                create_meeting_user = self.__lines.get_line('create_meeting_user', group_owner)
+                create_meeting_created_meeting = self.__lines.get_line('create_meeting_created_meeting', group_owner)
+                create_meeting_approve = self.__lines.get_line('create_meeting_approve', group_owner)
+                create_meeting_reject = self.__lines.get_line('create_meeting_reject', group_owner)
+                ret = [
+                    um.ServerResponse(user_id=uid, text=f'{create_meeting_wait_approval}'),
+                    um.ServerResponse(user_id=group_owner, text=f'{create_meeting_user} [[{uid}]] {create_meeting_created_meeting} {meeting_info.desc}\n/approve_meeting{meeting_id} -- {create_meeting_approve}\n/reject_meeting{meeting_id} -- {create_meeting_reject}')
+                ]
+            return ret
 
 
 class MeetingApproveCmdHandle(RequestHandler):
@@ -746,7 +751,7 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
             '/invite_member': InviteUserCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/accept_invite': InviteReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/reject_invite': InviteReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
-            '/create_meeting': CreateMeetingCmdHandler(),
+            '/create_meeting': CreateMeetingCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/approve_meeting': MeetingApproveCmdHandle(),
             '/reject_meeting': MeetingApproveCmdHandle(),
             '/invite_to_meeting': InviteToMeetingCmdHandler(),
@@ -772,8 +777,8 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
         self.__states_handlers = StatesHandlers({
             'creating_team': CreateTeamCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             'inviting_members': InviteUserCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
-            'setting_meeting_desc': CreateMeetingCmdHandler(),
-            'setting_meeting_time': CreateMeetingCmdHandler(),
+            'setting_meeting_desc': CreateMeetingCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
+            'setting_meeting_time': CreateMeetingCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             'inviting_to_meeting': InviteToMeetingCmdHandler(),
             'searching_child_team': AddDaughterTeamCmdHandler(),
             'adding_child_team': AddDaughterTeamCmdHandler(),
