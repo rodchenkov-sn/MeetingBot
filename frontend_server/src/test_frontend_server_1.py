@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from states import StateRepo
 from lines import LinesRepo
 
-from frontend_server import StartCmdHandler, CreateTeamCmdHandler, InviteUserCmdHandler, InviteReactionCmdHandler, CreateMeetingCmdHandler
+from frontend_server import StartCmdHandler, CreateTeamCmdHandler, InviteUserCmdHandler, InviteReactionCmdHandler, CreateMeetingCmdHandler, MeetingApproveCmdHandle
 from frontend_server import get_help_message
 
 import user_message_pb2 as um
@@ -396,3 +396,39 @@ def test_create_meeting_command_valid_time_need_approve(fr):
     assert r2.user_id == DEFAULT_USER_TAGGED_ID
     create_meeting_wait_approval = fr.lines.get_line('create_meeting_wait_approval', DEFAULT_USER_TAGGED_ID)
     assert r2.text == f'{create_meeting_wait_approval}'
+
+
+def test_meeting_approve_command_approve(fr):
+    mah = MeetingApproveCmdHandle(fr.states, fr.backend, fr.lines)
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TEAM_OWNER_ID,
+        text=f"{APPROVE_MEETING_CMD}{DEFAULT_MEETING_ID}"
+    )
+    r = list(mah.handle_request(msg))
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID # DEFAULT_USER_TAGGED_ID
+    meeting_approve_meeting = fr.lines.get_line('meeting_approve_meeting', DEFAULT_USER_TAGGED_ID)
+    meeting_approve_was_approved = fr.lines.get_line('meeting_approve_was_approved', DEFAULT_USER_TAGGED_ID)
+    assert r1.text == f'{meeting_approve_meeting} {DEFAULT_MEETING_DESC} {meeting_approve_was_approved}'
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    meeting_approve_approved = fr.lines.get_line('meeting_approve_approved', DEFAULT_USER_TEAM_OWNER_ID)
+    assert r2.text == f'{meeting_approve_approved}!'
+
+
+def test_meeting_approve_command_reject(fr):
+    mah = MeetingApproveCmdHandle(fr.states, fr.backend, fr.lines)
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_TEAM_OWNER_ID,
+        text=f"{REJECT_MEETING_CMD}{DEFAULT_MEETING_ID}"
+    )
+    r = list(mah.handle_request(msg))
+    r1 = r.pop()
+    assert r1.user_id == DEFAULT_USER_TEAM_OWNER_ID  # DEFAULT_USER_TAGGED_ID
+    meeting_approve_meeting = fr.lines.get_line('meeting_approve_meeting', DEFAULT_USER_TAGGED_ID)
+    meeting_approve_was_rejected = fr.lines.get_line('meeting_approve_was_rejected', DEFAULT_USER_TAGGED_ID)
+    assert r1.text == f'{meeting_approve_meeting} {DEFAULT_MEETING_DESC} {meeting_approve_was_rejected}'
+    r2 = r.pop()
+    assert r2.user_id == DEFAULT_USER_TEAM_OWNER_ID
+    meeting_approve_rejected = fr.lines.get_line('meeting_approve_rejected', DEFAULT_USER_TEAM_OWNER_ID)
+    assert r2.text == f'{meeting_approve_rejected}!'

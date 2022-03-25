@@ -259,31 +259,36 @@ class CreateMeetingCmdHandler(RequestHandler):
 
 
 class MeetingApproveCmdHandle(RequestHandler):
+    def __init__(self, states, backend, lines):
+        super().__init__()
+        self.__states = states
+        self.__backend = backend
+        self.__lines = lines
+
     def handle_request(self, request) -> List[um.ServerResponse]:
-        return []
-        # uid = request.user_id
-        # text = request.text
-        # if text.startswith('/approve_meeting'):
-        #     meeting_id = int(text[16:])
-        #     stub.ApproveMeeting(bs.EntityId(id=meeting_id))
-        #     meeting_info = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
-        #     meeting_approve_approved = linesRepo.get_line('meeting_approve_approved', uid)
-        #     meeting_approve_meeting = linesRepo.get_line('meeting_approve_meeting', meeting_info.creator)
-        #     meeting_approve_was_approved = linesRepo.get_line('meeting_approve_was_approved', meeting_info.creator)
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'{meeting_approve_approved}!'),
-        #         um.ServerResponse(user_id=meeting_info.creator, text=f'{meeting_approve_meeting} {meeting_info.desc} {meeting_approve_was_approved}')
-        #     ]
-        # else:
-        #     meeting_id = int(text[15:])
-        #     meeting_info = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
-        #     meeting_approve_rejected = linesRepo.get_line('meeting_approve_rejected', uid)
-        #     meeting_approve_meeting = linesRepo.get_line('meeting_approve_meeting', meeting_info.creator)
-        #     meeting_approve_was_rejected = linesRepo.get_line('meeting_approve_was_rejected', meeting_info.creator)
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'{meeting_approve_rejected}!'),
-        #         um.ServerResponse(user_id=meeting_info.creator, text=f'{meeting_approve_meeting} {meeting_info.desc} {meeting_approve_was_rejected}')
-        #     ]
+        uid = request.user_id
+        text = request.text
+        if text.startswith('/approve_meeting'):
+            meeting_id = int(text[16:])
+            self.__backend.ApproveMeeting(bs.EntityId(id=meeting_id))
+            meeting_info = self.__backend.GetMeetingInfo(bs.EntityId(id=meeting_id))
+            meeting_approve_approved = self.__lines.get_line('meeting_approve_approved', uid)
+            meeting_approve_meeting = self.__lines.get_line('meeting_approve_meeting', meeting_info.creator)
+            meeting_approve_was_approved = self.__lines.get_line('meeting_approve_was_approved', meeting_info.creator)
+            return [
+                um.ServerResponse(user_id=uid, text=f'{meeting_approve_approved}!'),
+                um.ServerResponse(user_id=meeting_info.creator, text=f'{meeting_approve_meeting} {meeting_info.desc} {meeting_approve_was_approved}')
+            ]
+        else:
+            meeting_id = int(text[15:])
+            meeting_info = self.__backend.GetMeetingInfo(bs.EntityId(id=meeting_id))
+            meeting_approve_rejected = self.__lines.get_line('meeting_approve_rejected', uid)
+            meeting_approve_meeting = self.__lines.get_line('meeting_approve_meeting', meeting_info.creator)
+            meeting_approve_was_rejected = self.__lines.get_line('meeting_approve_was_rejected', meeting_info.creator)
+            return [
+                um.ServerResponse(user_id=uid, text=f'{meeting_approve_rejected}!'),
+                um.ServerResponse(user_id=meeting_info.creator, text=f'{meeting_approve_meeting} {meeting_info.desc} {meeting_approve_was_rejected}')
+            ]
 
 
 class InviteToMeetingCmdHandler(RequestHandler):
@@ -752,8 +757,8 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
             '/accept_invite': InviteReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/reject_invite': InviteReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/create_meeting': CreateMeetingCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
-            '/approve_meeting': MeetingApproveCmdHandle(),
-            '/reject_meeting': MeetingApproveCmdHandle(),
+            '/approve_meeting': MeetingApproveCmdHandle(self.__state_repo, self.__backend, self.__lines_repo),
+            '/reject_meeting': MeetingApproveCmdHandle(self.__state_repo, self.__backend, self.__lines_repo),
             '/invite_to_meeting': InviteToMeetingCmdHandler(),
             '/accept_meeting_invite': MeetingInviteReactionCmdHandler(),
             '/reject_meeting_invite': MeetingInviteReactionCmdHandler(),
