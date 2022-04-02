@@ -530,234 +530,268 @@ class EditPolicyCmdHandler(RequestHandler):
 
 
 class AddToMeetingCmdHandler(RequestHandler):
+    def __init__(self, states, backend, lines):
+        super().__init__()
+        self.__states = states
+        self.__backend = backend
+        self.__lines = lines
+
     def handle_request(self, request) -> List[um.ServerResponse]:
-        return []
-        # uid = request.user_id
-        # text = request.text
-        # state = stateRepo.get_state(uid)
-        # if request.text == '/add_to_meeting':
-        #     msg = ''
-        #     meetings = stub.GetOwnedMeetings(bs.EntityId(id=uid))
-        #     for meeting in meetings:
-        #         msg += f'/add_to_meeting{meeting.id} -- {meeting.name}\n'
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=msg)
-        #     ]
-        # elif state is None:
-        #     meeting_id = int(text[15:])
-        #     stateRepo.set_state(uid, State('adding_to_meeting', meeting_id))
-        #     add_to_meeting_tag = linesRepo.get_line('add_to_meeting_tag', uid)
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'{add_to_meeting_tag}')
-        #     ]
-        # else:
-        #     meeting_id = state.argument
-        #     stateRepo.clear_state(uid)
-        #     mentioned_users = map(lambda m: int(m[2:len(m) - 2]), re.findall(r'\[\[\d+\]\]', text))
-        #     team_id = stub.GetMeetingInfo(bs.EntityId(id=meeting_id)).team
-        #     invitable_members = map(lambda x: x.id, stub.GetInvitableMembers(bs.EntityId(id=team_id)))
-        #     response = []
-        #     meeting_info = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
-        #     meeting_date = datetime.fromtimestamp(meeting_info.time)
-        #     for mu in mentioned_users:
-        #         if mu in invitable_members:
-        #             stub.AddParticipant(bs.Participating(object=meeting_id, subject=mu))
-        #             add_to_meeting_you_were_added = linesRepo.get_line('add_to_meeting_you_were_added', mu)
-        #             response.append(um.ServerResponse(user_id=mu, text=f'{add_to_meeting_you_were_added} {meeting_info.desc}'))
-        #             add_to_meeting_meeting_starts_at = linesRepo.get_line('add_to_meeting_meeting_starts_at', mu)
-        #             response.append(um.ServerResponse(user_id=mu, text=f'{meeting_info.desc} {add_to_meeting_meeting_starts_at} {meeting_date}'))
-        #     add_to_meeting_users_were_added = linesRepo.get_line('add_to_meeting_users_were_added', uid)
-        #     response.append(um.ServerResponse(user_id=uid, text=f'{add_to_meeting_users_were_added}'))
-        #     response.append(get_help_message(uid))
-        #     return response
+        uid = request.user_id
+        text = request.text
+        state = self.__states.get_state(uid)
+        if request.text == '/add_to_meeting':
+            msg = ''
+            meetings = self.__backend.GetOwnedMeetings(bs.EntityId(id=uid))
+            for meeting in meetings:
+                msg += f'/add_to_meeting{meeting.id} -- {meeting.name}\n'
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
+        elif state is None:
+            meeting_id = int(text[15:])
+            self.__states.set_state(uid, State('adding_to_meeting', meeting_id))
+            add_to_meeting_tag = self.__lines.get_line('add_to_meeting_tag', uid)
+            return [
+                um.ServerResponse(user_id=uid, text=f'{add_to_meeting_tag}')
+            ]
+        else:
+            meeting_id = state.argument
+            self.__states.clear_state(uid)
+            mentioned_users = map(lambda m: int(m[2:len(m) - 2]), re.findall(r'\[\[\d+\]\]', text))
+            team_id = self.__backend.GetMeetingInfo(bs.EntityId(id=meeting_id)).team
+            invitable_members = map(lambda x: x.id, self.__backend.GetInvitableMembers(bs.EntityId(id=team_id)))
+            response = []
+            meeting_info = self.__backend.GetMeetingInfo(bs.EntityId(id=meeting_id))
+            meeting_date = datetime.fromtimestamp(meeting_info.time)
+            for mu in mentioned_users:
+                if mu in invitable_members:
+                    self.__backend.AddParticipant(bs.Participating(object=meeting_id, subject=mu))
+                    add_to_meeting_you_were_added = self.__lines.get_line('add_to_meeting_you_were_added', mu)
+                    response.append(um.ServerResponse(user_id=mu, text=f'{add_to_meeting_you_were_added} {meeting_info.desc}'))
+                    add_to_meeting_meeting_starts_at = self.__lines.get_line('add_to_meeting_meeting_starts_at', mu)
+                    response.append(um.ServerResponse(user_id=mu, text=f'{meeting_info.desc} {add_to_meeting_meeting_starts_at} {meeting_date}'))
+            add_to_meeting_users_were_added = self.__lines.get_line('add_to_meeting_users_were_added', uid)
+            response.append(um.ServerResponse(user_id=uid, text=f'{add_to_meeting_users_were_added}'))
+            response.append(get_help_message(uid))
+            return response
 
 
 class UpdateMeetingTimeCmdHandler(RequestHandler):
+    def __init__(self, states, backend, lines):
+        super().__init__()
+        self.__states = states
+        self.__backend = backend
+        self.__lines = lines
+
     def handle_request(self, request) -> List[um.ServerResponse]:
-        return []
-        # uid = request.user_id
-        # text = request.text
-        # state = stateRepo.get_state(uid)
-        # if request.text == '/update_meeting_time':
-        #     msg = ''
-        #     meetings = stub.GetOwnedMeetings(bs.EntityId(id=uid))
-        #     for meeting in meetings:
-        #         msg += f'/update_meeting_time{meeting.id} -- {meeting.name}\n'
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=msg)
-        #     ]
-        # elif state is None:
-        #     meeting_id = int(text[20:])
-        #     stateRepo.set_state(uid, State('updating_meeting_time', meeting_id))
-        #     update_meeting_time_enter_datetime = linesRepo.get_line('update_meeting_time_enter_datetime', uid)
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'{update_meeting_time_enter_datetime}:')
-        #     ]
-        # else:
-        #     meeting_id = state.argument
-        #     stateRepo.clear_state(uid)
-        #     dt = datetime.strptime(text, '%d-%m-%Y %H:%M')
-        #     stub.UpdateMeetingInfo(bs.MeetingInfo(
-        #         id=meeting_id,
-        #         creator=-1,  # not important
-        #         team=-1,  # not important
-        #         desc='',  # not important
-        #         time=int(dt.timestamp())
-        #     ))
-        #     response = []
-        #     meeting_info = stub.GetMeetingInfo(bs.EntityId(id=meeting_id))
-        #     meeting_date = datetime.fromtimestamp(meeting_info.time)
-        #     update_meeting_time_time_updated = linesRepo.get_line('update_meeting_time_time_updated', uid)
-        #     response.append(um.ServerResponse(user_id=uid, text=f'{meeting_info.desc} {update_meeting_time_time_updated} {meeting_date}'))
-        #     response.append(get_help_message(uid))
-        #     return response
+        uid = request.user_id
+        text = request.text
+        state = self.__states.get_state(uid)
+        if request.text == '/update_meeting_time':
+            msg = ''
+            meetings = self.__backend.GetOwnedMeetings(bs.EntityId(id=uid))
+            for meeting in meetings:
+                msg += f'/update_meeting_time{meeting.id} -- {meeting.name}\n'
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
+        elif state is None:
+            meeting_id = int(text[20:])
+            self.__states.set_state(uid, State('updating_meeting_time', meeting_id))
+            update_meeting_time_enter_datetime = self.__lines.get_line('update_meeting_time_enter_datetime', uid)
+            return [
+                um.ServerResponse(user_id=uid, text=f'{update_meeting_time_enter_datetime}:')
+            ]
+        else:
+            meeting_id = state.argument
+            self.__states.clear_state(uid)
+            dt = datetime.strptime(text, '%d-%m-%Y %H:%M')
+            self.__backend.UpdateMeetingInfo(bs.MeetingInfo(
+                id=meeting_id,
+                creator=-1,  # not important
+                team=-1,  # not important
+                desc='',  # not important
+                time=int(dt.timestamp())
+            ))
+            response = []
+            meeting_info = self.__backend.GetMeetingInfo(bs.EntityId(id=meeting_id))
+            meeting_date = datetime.fromtimestamp(meeting_info.time)
+            update_meeting_time_time_updated = self.__lines.get_line('update_meeting_time_time_updated', uid)
+            response.append(um.ServerResponse(user_id=uid, text=f'{meeting_info.desc} {update_meeting_time_time_updated} {meeting_date}'))
+            response.append(get_help_message(uid))
+            return response
 
 
 class GetAgendaCmdHandler(RequestHandler):
+    def __init__(self, backend, lines):
+        super().__init__()
+        self.__backend = backend
+        self.__lines = lines
+
     def handle_request(self, request) -> List[um.ServerResponse]:
-        return []
-        # uid = request.user_id
-        # text = request.text
-        # if text == '/get_agenda':
-        #     get_agenda_today = linesRepo.get_line('get_agenda_today', uid)
-        #     get_agenda_tomorrow = linesRepo.get_line('get_agenda_tomorrow', uid)
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'/get_agenda_today -- {get_agenda_today}\n/get_agenda_tomorrow -- {get_agenda_tomorrow}')
-        #     ]
-        # elif text == '/get_agenda_today':
-        #     start = datetime.now()
-        #     start = start.replace(hour=0, minute=0, second=0, microsecond=0)
-        #     end = start + timedelta(days=1)
-        # else:
-        #     start = datetime.now()
-        #     start = start.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
-        #     end = start + timedelta(days=1)
-        # msg = ''
-        # for info in stub.GetUserMeetings(bs.EntityId(id=uid)):
-        #     meeting_info = stub.GetMeetingInfo(bs.EntityId(id=info.id))
-        #     if meeting_info.time > start.timestamp() and meeting_info.time < end.timestamp():
-        #         pretty_time = datetime.fromtimestamp(meeting_info.time).strftime('%H:%M')
-        #         get_agenda_at = linesRepo.get_line('get_agenda_at', uid)
-        #         msg += f'{meeting_info.desc} {get_agenda_at} {pretty_time}\n\n'
-        # return [
-        #     um.ServerResponse(user_id=uid, text=msg)
-        # ]
+        uid = request.user_id
+        text = request.text
+        if text == '/get_agenda':
+            get_agenda_today = self.__lines.get_line('get_agenda_today', uid)
+            get_agenda_tomorrow = self.__lines.get_line('get_agenda_tomorrow', uid)
+            return [
+                um.ServerResponse(user_id=uid, text=f'/get_agenda_today -- {get_agenda_today}\n/get_agenda_tomorrow -- {get_agenda_tomorrow}')
+            ]
+        elif text == '/get_agenda_today':
+            start = datetime.now()
+            start = start.replace(hour=0, minute=0, second=0, microsecond=0)
+            end = start + timedelta(days=1)
+        else:
+            start = datetime.now()
+            start = start.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+            end = start + timedelta(days=1)
+        msg = ''
+        for info in self.__backend.GetUserMeetings(bs.EntityId(id=uid)):
+            meeting_info = self.__backend.GetMeetingInfo(bs.EntityId(id=info.id))
+            if meeting_info.time > start.timestamp() and meeting_info.time < end.timestamp():
+                pretty_time = datetime.fromtimestamp(meeting_info.time).strftime('%H:%M')
+                get_agenda_at = self.__lines.get_line('get_agenda_at', uid)
+                msg += f'{meeting_info.desc} {get_agenda_at} {pretty_time}\n\n'
+        return [
+            um.ServerResponse(user_id=uid, text=msg)
+        ]
 
 
 class GCalAuthCmdHandler(RequestHandler):
+    def __init__(self, states, calendar, lines):
+        super().__init__()
+        self.__states = states
+        self.__calendar = calendar
+        self.__lines = lines
+
     def handle_request(self, request) -> List[um.ServerResponse]:
-        return []
-        # uid = request.user_id
-        # text = request.text
-        # state = stateRepo.get_state(uid)
-        # if text == '/auth_gcal':
-        #     stateRepo.set_state(uid, State('authenticating_gcal', -1))
-        #     url = calendar_stub.RequestAuth(cs.AuthRequest(user_id=uid)).auth_url
-        #     gcal_auth_open = linesRepo.get_line('gcal_auth_open', uid)
-        #     gcal_auth_respond_code = linesRepo.get_line('gcal_auth_respond_code', uid)
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'{gcal_auth_open} {url}\n{gcal_auth_respond_code}')
-        #     ]
-        # else:
-        #     stateRepo.clear_state(uid)
-        #     ok = calendar_stub.FinishAuth(cs.AuthCode(user_id=uid, auth_code=text)).ok
-        #     if ok:
-        #         gcal_auth_authenticated = linesRepo.get_line('gcal_auth_authenticated', uid)
-        #         return [
-        #             um.ServerResponse(user_id=uid, text=f'{gcal_auth_authenticated}!')
-        #         ]
-        #     else:
-        #         gcal_auth_went_wrong = linesRepo.get_line('gcal_auth_went_wrong', uid)
-        #         return [
-        #             um.ServerResponse(user_id=uid, text=f'{gcal_auth_went_wrong}')
-        #         ]
+        uid = request.user_id
+        text = request.text
+        state = self.__states.get_state(uid)
+        if text == '/auth_gcal':
+            self.__states.set_state(uid, State('authenticating_gcal', -1))
+            url = self.__calendar.RequestAuth(cs.AuthRequest(user_id=uid)).auth_url
+            gcal_auth_open = self.__lines.get_line('gcal_auth_open', uid)
+            gcal_auth_respond_code = self.__lines.get_line('gcal_auth_respond_code', uid)
+            return [
+                um.ServerResponse(user_id=uid, text=f'{gcal_auth_open} {url}\n{gcal_auth_respond_code}')
+            ]
+        else:
+            self.__states.clear_state(uid)
+            ok = self.__calendar.FinishAuth(cs.AuthCode(user_id=uid, auth_code=text)).ok
+            if ok:
+                gcal_auth_authenticated = self.__lines.get_line('gcal_auth_authenticated', uid)
+                return [
+                    um.ServerResponse(user_id=uid, text=f'{gcal_auth_authenticated}!')
+                ]
+            else:
+                gcal_auth_went_wrong = self.__lines.get_line('gcal_auth_went_wrong', uid)
+                return [
+                    um.ServerResponse(user_id=uid, text=f'{gcal_auth_went_wrong}')
+                ]
 
 
 class UploadFileCmdHandler(RequestHandler):
+    def __init__(self, states, backend, lines, files):
+        super().__init__()
+        self.__states = states
+        self.__backend = backend
+        self.__lines = lines
+        self.__files = files
+
     def handle_request(self, request) -> List[um.ServerResponse]:
-        return []
-        # uid = request.user_id
-        # text = request.text
-        # state = stateRepo.get_state(uid)
-        # if text == '/upload_file':
-        #     msg = ''
-        #     for info in stub.GetTeamsByUser(bs.EntityId(id=uid)):
-        #         msg += f'/upload_file{info.id} -- {info.name}\n'
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=msg)
-        #     ]
-        # elif state is None:
-        #     group_id = int(text[12:])
-        #     stateRepo.set_state(uid, State('uploading_file', group_id))
-        #     upload_file_send_file = linesRepo.get_line('upload_file_send_file', uid)
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'{upload_file_send_file}')
-        #     ]
-        # else:
-        #     group_id = state.argument
-        #     stateRepo.clear_state(uid)
-        #     file_id = fs_stub.UploadFile(
-        #         fs.FileInfo(
-        #             name=request.file_name, 
-        #             download_url=request.file_url
-        #         )
-        #     ).id
-        #     stub.AddFileToTeam(bs.Participating(object=group_id, subject=file_id))
-        #     upload_file_uploaded = linesRepo.get_line('upload_file_uploaded', uid)
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=f'{upload_file_uploaded}!')
-        #     ]
+        uid = request.user_id
+        text = request.text
+        state = self.__states.get_state(uid)
+        if text == '/upload_file':
+            msg = ''
+            for info in self.__backend.GetTeamsByUser(bs.EntityId(id=uid)):
+                msg += f'/upload_file{info.id} -- {info.name}\n'
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
+        elif state is None:
+            group_id = int(text[12:])
+            self.__states.set_state(uid, State('uploading_file', group_id))
+            upload_file_send_file = self.__lines.get_line('upload_file_send_file', uid)
+            return [
+                um.ServerResponse(user_id=uid, text=f'{upload_file_send_file}')
+            ]
+        else:
+            group_id = state.argument
+            self.__states.clear_state(uid)
+            file_id = self.__files.UploadFile(
+                fs.FileInfo(
+                    name=request.file_name, 
+                    download_url=request.file_url
+                )
+            ).id
+            self.__backend.AddFileToTeam(bs.Participating(object=group_id, subject=file_id))
+            upload_file_uploaded = self.__lines.get_line('upload_file_uploaded', uid)
+            return [
+                um.ServerResponse(user_id=uid, text=f'{upload_file_uploaded}!')
+            ]
 
 
 class GetUploadedFilesCmdHandler(RequestHandler):
+    def __init__(self, states, backend, files):
+        super().__init__()
+        self.__states = states
+        self.__backend = backend
+        self.__files = files
+
     def handle_request(self, request) -> List[um.ServerResponse]:
-        return []
-        # uid = request.user_id
-        # text = request.text
-        # state = stateRepo.get_state(uid)
-        # if text == '/get_files':
-        #     msg = ''
-        #     for info in stub.GetTeamsByUser(bs.EntityId(id=uid)):
-        #         msg += f'/get_files{info.id} -- {info.name}\n'
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=msg)
-        #     ]
-        # else:
-        #     group_id = int(text[10:])
-        #     msg = ''
-        #     for item in stub.GetAvailableFiles(bs.EntityId(id=group_id)):
-        #         file_info = fs_stub.DownloadFile(fs.FileId(id=item.id))
-        #         msg += f'{file_info.name} -- {file_info.download_url}\n'
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=msg)
-        #     ]
+        uid = request.user_id
+        text = request.text
+        state = self.__states.get_state(uid)
+        if text == '/get_files':
+            msg = ''
+            for info in self.__backend.GetTeamsByUser(bs.EntityId(id=uid)):
+                msg += f'/get_files{info.id} -- {info.name}\n'
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
+        else:
+            group_id = int(text[10:])
+            msg = ''
+            for item in self.__backend.GetAvailableFiles(bs.EntityId(id=group_id)):
+                file_info = self.__files.DownloadFile(fs.FileId(id=item.id))
+                msg += f'{file_info.name} -- {file_info.download_url}\n'
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
 
 
 class ChangeLanguageCmdHandler(RequestHandler):
+    def __init__(self, states, lines):
+        super().__init__()
+        self.__states = states
+        self.__lines = lines
+
     def handle_request(self, request) -> List[um.ServerResponse]:
-        return []
-        # uid = request.user_id
-        # text = request.text
-        # state = stateRepo.get_state(uid)
-        # if text == '/change_language':
-        #     stateRepo.set_state(uid, State('changing_language', -1))
-        #     msg = ''
-        #     for language in linesRepo.get_all_languages():
-        #         language_name = linesRepo.get_line(language, uid)
-        #         msg += f'/change_language__{language} -- {language_name}\n'
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=msg)
-        #     ]
-        # elif state.action == 'changing_language':
-        #     stateRepo.clear_state(uid)
-        #     language = str(text[18:])
-        #     linesRepo.update_user_language(uid, language)
-        #     change_language_changed = linesRepo.get_line('change_language_changed', uid)
-        #     msg = f'{change_language_changed}'
-        #     return [
-        #         um.ServerResponse(user_id=uid, text=msg),
-        #         get_help_message(uid)
-        #     ]
+        uid = request.user_id
+        text = request.text
+        state = self.__states.get_state(uid)
+        if text == '/change_language':
+            self.__states.set_state(uid, State('changing_language', -1))
+            msg = ''
+            for language in self.__lines.get_all_languages():
+                language_name = self.__lines.get_line(language, uid)
+                msg += f'/change_language__{language} -- {language_name}\n'
+            return [
+                um.ServerResponse(user_id=uid, text=msg)
+            ]
+        elif state.action == 'changing_language':
+            self.__states.clear_state(uid)
+            language = str(text[18:])
+            self.__lines.update_user_language(uid, language)
+            change_language_changed = self.__lines.get_line('change_language_changed', uid)
+            msg = f'{change_language_changed}'
+            return [
+                um.ServerResponse(user_id=uid, text=msg),
+                get_help_message(uid)
+            ]
 
 
 class UserMessageHandler(umg.UserMessageHandlerServicer):
@@ -786,15 +820,15 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
             '/reject_meeting_invite': MeetingInviteReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/add_child_team': AddDaughterTeamCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/edit_policy': EditPolicyCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
-            '/add_to_meeting': AddToMeetingCmdHandler(),
-            '/update_meeting_time': UpdateMeetingTimeCmdHandler(),
-            '/get_agenda': GetAgendaCmdHandler(),
-            '/get_agenda_today': GetAgendaCmdHandler(),
-            '/get_agenda_tomorrow': GetAgendaCmdHandler(),
-            '/auth_gcal': GCalAuthCmdHandler(),
-            '/upload_file': UploadFileCmdHandler(),
-            '/get_files': GetUploadedFilesCmdHandler(),
-            '/change_language': ChangeLanguageCmdHandler(),
+            '/add_to_meeting': AddToMeetingCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
+            '/update_meeting_time': UpdateMeetingTimeCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
+            '/get_agenda': GetAgendaCmdHandler(self.__backend, self.__lines_repo),
+            '/get_agenda_today': GetAgendaCmdHandler(self.__backend, self.__lines_repo),
+            '/get_agenda_tomorrow': GetAgendaCmdHandler(self.__backend, self.__lines_repo),
+            '/auth_gcal': GCalAuthCmdHandler(self.__state_repo, self.__calendar_service, self.__lines_repo),
+            '/upload_file': UploadFileCmdHandler(self.__state_repo, self.__backend, self.__lines_repo, self.__file_service),
+            '/get_files': GetUploadedFilesCmdHandler(self.__state_repo, self.__backend, self.__file_service),
+            '/change_language': ChangeLanguageCmdHandler(self.__state_repo, self.__lines_repo),
             '/aom': NotificationReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/pom': NotificationReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             '/acc_child': AddChildTeamNotiifcationReactionCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
@@ -810,11 +844,11 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
             'searching_child_team': AddDaughterTeamCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             'adding_child_team': AddDaughterTeamCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
             'editing_policy': EditPolicyCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
-            'adding_to_meeting': AddToMeetingCmdHandler(),
-            'updating_meeting_time': UpdateMeetingTimeCmdHandler(),
-            'authenticating_gcal': GCalAuthCmdHandler(),
-            'uploading_file': UploadFileCmdHandler(),
-            'changing_language': ChangeLanguageCmdHandler()
+            'adding_to_meeting': AddToMeetingCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
+            'updating_meeting_time': UpdateMeetingTimeCmdHandler(self.__state_repo, self.__backend, self.__lines_repo),
+            'authenticating_gcal': GCalAuthCmdHandler(self.__state_repo, self.__calendar_service, self.__lines_repo),
+            'uploading_file': UploadFileCmdHandler(self.__state_repo, self.__backend, self.__lines_repo, self.__file_service),
+            'changing_language': ChangeLanguageCmdHandler(self.__state_repo, self.__lines_repo)
         })
 
     def HandleMessage(self, request, context):

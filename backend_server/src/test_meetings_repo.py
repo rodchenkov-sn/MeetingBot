@@ -2,7 +2,9 @@ import pytest
 
 import startup # for correct coverage without __init__.py
 
-from meetings import MeetingsRepo, Meeting, meeting_from_mongo
+import backend_service_pb2 as bs
+
+from meetings import MeetingsRepo, Meeting, meeting_from_mongo, meeting_from_msg
 from test_mock_collection import MockCollection
 
 
@@ -36,6 +38,17 @@ def test_meeting_serialization(resource_setup):
     m = make_default_test_meeting()
     s = m.serialize()
     assert m == meeting_from_mongo(s)
+
+def test_meting_from_proto(resource_setup):
+    m = make_default_test_meeting()
+    msg = bs.MeetingInfo(
+        id=m.id,
+        creator=m.creator,
+        team=m.team,
+        desc=m.desc,
+        time=m.time
+    )
+    assert meeting_from_msg(msg) == m
 
 def test_add_meeting(resource_setup):
     repo, collection = resource_setup
@@ -198,6 +211,21 @@ def test_approve_meeting(resource_setup):
     id = collection.items[0]['_id']
     i = collection.items[0]
     assert not i['approved']
+    repo.approve_meeting(id)
+    assert i['approved']
+
+def test_approve_invalid_meeting(resource_setup):
+    repo, collection = resource_setup
+    with pytest.raises(ValueError):
+        repo.approve_meeting(0)
+
+def test_approve_meeting_already_approved(resource_setup):
+    repo, collection = resource_setup
+    repo.add_meeting(make_default_empty_meeting())
+    id = collection.items[0]['_id']
+    i = collection.items[0]
+    assert not i['approved']
+    repo.approve_meeting(id)
     repo.approve_meeting(id)
     assert i['approved']
 
