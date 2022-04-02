@@ -23,10 +23,11 @@ class FileNames:
         return self.__collection.find_one({'_id': id})['original_name']
 
 
-file_names = FileNames()
-
-
 class FileRepoServicer(frs.FileRepoServiceServicer):
+    def __init__(self):
+        super().__init__()
+        self.__file_names = FileNames()
+
     def UploadFile(self, request, context):
         new_id = random.randint(1, 999999999)
         tmp_name = f'{new_id}_{request.name}'
@@ -36,12 +37,12 @@ class FileRepoServicer(frs.FileRepoServiceServicer):
             requests.post(f'https://meetingbot-fileservice.herokuapp.com/files/{tmp_name}', data=f.read(), verify=False)
         os.remove(tmp_name)
 
-        file_names.save(new_id, request.name)
+        self.__file_names.save(new_id, request.name)
         return fr.FileId(id=new_id)
 
 
     def DownloadFile(self, request, context):
-        original_name = file_names.get_name(request.id)
+        original_name = self.__file_names.get_name(request.id)
         return fr.FileInfo(
             name=original_name,
             download_url=f'https://meetingbot-fileservice.herokuapp.com/files/{request.id}_{original_name}'
