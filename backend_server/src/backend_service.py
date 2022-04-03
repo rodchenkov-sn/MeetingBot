@@ -1,6 +1,7 @@
 import random
 import grpc
 import yaml
+import os
 
 from concurrent import futures
 from typing import Any
@@ -161,11 +162,17 @@ def serve():
     random.seed()
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 
-    with open('config.yml', 'r') as config_file:
-        config = yaml.safe_load(config_file)
+    if os.environ.get("BackendTestEnv") is None:
+        with open('config.yml', 'r') as config_file:
+            config = yaml.safe_load(config_file)
 
-    teams_repo = TeamsRepo(MongoCollection(config['teams_repo_url'], 'MeetingBotDB', 'Teams'))
-    meetings_repo = MeetingsRepo(MongoCollection(config['meetings_repo_url'], 'MeetingBotDB', 'Meetings'))
+        teams_repo = TeamsRepo(MongoCollection(config['teams_repo_url'], 'MeetingBotDB', 'Teams'))
+        meetings_repo = MeetingsRepo(MongoCollection(config['meetings_repo_url'], 'MeetingBotDB', 'Meetings'))
+    else:
+        from test_mock_collection import MockCollection
+        teams_repo = TeamsRepo(MockCollection())
+        meetings_repo = MeetingsRepo(MockCollection())
+
     channel_calendar = grpc.insecure_channel('calendar-service:50053')
     calendar_stub = css.CalendarServiceStub(channel_calendar)
 

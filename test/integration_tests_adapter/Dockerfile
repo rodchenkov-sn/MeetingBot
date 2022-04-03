@@ -5,7 +5,7 @@ WORKDIR /app
 
 RUN python -m pip install --upgrade pip
 
-COPY frontend_server/requirements.txt /app/requirements.txt
+COPY test/integration_tests_adapter/requirements.txt /app/requirements.txt
 RUN pip install -r requirements.txt
 
-COPY frontend_server/src/ /app
+COPY test/integration_tests_adapter/src/ /app
