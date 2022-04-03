@@ -13,3 +13,5 @@ jobs:
         run: docker compose -f test-docker-compose.yml run integration-tests-adapter pytest -v
       - name: Shutdown
         run: docker compose -f test-docker-compose.yml down
+      - name: Cleanup
+        run: docker image prune -a -f
