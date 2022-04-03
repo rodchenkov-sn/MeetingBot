@@ -1,0 +1,7 @@
+grpcio
+protobuf
+requests
+pymongo
+dnspython
+pyyaml
+pytest

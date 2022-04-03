@@ -1,0 +1,72 @@
+version: "3"
+
+services:
+
+  calendar-service:
+    networks:
+      - internal-net
+    build:
+      context: ./
+      dockerfile: test/mock_calendar_service/Dockerfile
+    command: python startup.py
+    ports: 
+      - 50053:50053
+
+  backend-service:
+    networks:
+      - internal-net
+    build:
+      context: ./
+      dockerfile: backend_server/DockerfileTest
+    command: python startup.py
+    ports:
+      - 50062
+    depends_on:
+      - calendar-service
+
+  nginx-service:
+    image: nginx
+    networks:
+      - internal-net
+    ports:
+      - 50052:50052
+    depends_on:
+      - backend-service
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+
+  frontend-service:
+    networks:
+      - internal-net
+    build:
+      context: ./
+      dockerfile: frontend_server/Dockerfile
+    command: python startup.py
+    ports:
+      - 50051:50051
+    depends_on:
+      - nginx-service
+
+  file-service:
+    networks:
+      - internal-net
+    build:
+      context: ./
+      dockerfile: test/mock_file_service/Dockerfile
+    command: python main.py
+    ports:
+      - 50054:50054
+
+  integration-tests-adapter:
+    container_name: integration-tests-adapter
+    build:
+      context: ./
+      dockerfile: test/integration_tests_adapter/Dockerfile
+    depends_on:
+      - frontend-service
+    networks:
+      - internal-net
+
+networks:
+  internal-net:
+    driver: bridge
