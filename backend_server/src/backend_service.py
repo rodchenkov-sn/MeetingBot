@@ -1,8 +1,3 @@
-import random
-import grpc
-import yaml
-import os
-
 from concurrent import futures
 from typing import Any
 
@@ -177,6 +172,7 @@ def serve():
     calendar_stub = css.CalendarServiceStub(channel_calendar)
 
     bsg.add_BackendServiceServicer_to_server(BackendServiceHandler(teams_repo, meetings_repo, calendar_stub), server)
+    
     server.add_insecure_port('[::]:50062')
     server.start()
     server.wait_for_termination()

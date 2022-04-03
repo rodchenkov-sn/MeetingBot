@@ -867,13 +867,13 @@ def serve():
 
     channel_calendar = grpc.insecure_channel('calendar-service:50053')
     calendar_stub = css.CalendarServiceStub(channel_calendar)
-
     
     channel_fs = grpc.insecure_channel('file-service:50054')
     fs_stub = fss.FileRepoServiceStub(channel_fs)
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     umg.add_UserMessageHandlerServicer_to_server(UserMessageHandler(backend_stub, fs_stub, calendar_stub), server)
+    
     server.add_insecure_port('[::]:50051')
     server.start()
     server.wait_for_termination()

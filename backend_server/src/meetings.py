@@ -27,7 +27,6 @@ class Meeting:
             and self.participants == other.participants
         )
 
-
     def set_id(self, _id: int) -> None:
         self.id = _id
 
