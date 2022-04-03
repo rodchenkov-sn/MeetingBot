@@ -15,7 +15,7 @@ jobs:
     needs: [setup]
     steps:
       - name: Test
-        run: docker compose -f test-docker-compose.yml run integration-tests-adapter pytest -v
+        run: docker compose -f test-docker-compose.yml run --no-TTY integration-tests-adapter pytest -v
   
   cleanup:
     runs-on: self-hosted
