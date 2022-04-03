@@ -1,7 +1,7 @@
 name: on-push-integration-tests-workflow
 on: push
 jobs:
-  test:
+  setup:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v2
@@ -9,9 +9,21 @@ jobs:
         run: sh protobufs/compile.sh
       - name: Build test env
         run: docker compose -f test-docker-compose.yml up -d
+    
+  test:
+    runs-on: self-hosted
+    needs: [setup]
+    steps:
       - name: Test
         run: docker compose -f test-docker-compose.yml run integration-tests-adapter pytest -v
+  
+  cleanup:
+    runs-on: self-hosted
+    needs: [test]
+    if: always()
+    steps:
       - name: Shutdown
         run: docker compose -f test-docker-compose.yml down
       - name: Cleanup
         run: docker image prune -a -f
+  
