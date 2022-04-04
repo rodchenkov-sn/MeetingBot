@@ -13,4 +13,4 @@ def test_test():
         text='/help'
     )
     responses = list(stub.HandleMessage(msg))
-    assert len(responses) == 0
+    assert len(responses) == 1
