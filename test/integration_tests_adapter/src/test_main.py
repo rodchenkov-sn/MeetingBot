@@ -13,9 +13,15 @@ DEFAULT_USER_ID_HELP = 1
 DEFAULT_USER_ID_CREATE_TEAM = 2
 DEFAULT_USER_ID_INVITE_USER = 3
 DEFAULT_TAGGED_USER_ID_INVITE_USER = 4
+DEFAULT_USER_ID_ACCEPT_INVITATION = 5
+DEFAULT_TAGGED_USER_ID_ACCEPT_INVITATION = 6
+DEFAULT_USER_ID_REJECT_INVITATION = 7
+DEFAULT_TAGGED_USER_ID_REJECT_INVITATION = 8
 # team name
 DEFAULT_TEAM_NAME_CREATE_TEAM = 'gay team'
 DEFAULT_TEAM_NAME_INVITE_USER = 'sad team'
+DEFAULT_TEAM_NAME_ACCEPT_INVITATION = 'wide team'
+DEFAULT_TEAM_NAME_REJECT_INVITATION = 'tight team'
 # cmd
 CMD_HELP = '/help'
 CMD_CREATE_TEAM = '/create_team'
@@ -44,8 +50,14 @@ LINE_INVITE_USER_YOU_WERE_INVITED = "You were invited to team"
 LINE_INVITE_USER_BY = "by"
 LINE_INVITE_USER_ACCEPT = "accept"
 LINE_INVITE_USER_REJECT = "reject"
+LINE_ACCEPT_INVITATION_ACCEPTED = "Accepted"
+LINE_REJECT_INVITATION_REJECTED = "Rejected"
+LINE_ACCEPT_INVITATION_ACCEPTED_INVITATION = "accepted your invitation"
+LINE_REJECT_INVITATION_REJECTED_INVITATION = "rejected your invitation"
 # pattern
-PATTERN_INVITE_USER_TEAM_OPTION = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_INVITE_USER}\n")
+PATTERN_TEAM_OPTION_INVITE_USER = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_INVITE_USER}\n")
+PATTERN_TEAM_OPTION_ACCEPT_INVITATION = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_ACCEPT_INVITATION}\n")
+PATTERN_TEAM_OPTION_REJECT_INVITATION = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_REJECT_INVITATION}\n")
 
 
 def test_help():
@@ -108,7 +120,7 @@ def test_invite_user():
     assert len(responses) == 1
     r = responses.pop()
     assert r.user_id == DEFAULT_USER_ID_INVITE_USER
-    assert PATTERN_INVITE_USER_TEAM_OPTION.match(r.text)
+    assert PATTERN_TEAM_OPTION_INVITE_USER.match(r.text)
     # send team option
     team_id = r.text
     team_id = re.sub(CMD_INVITE_MEMBER, "", team_id)
@@ -138,3 +150,135 @@ def test_invite_user():
     r3 = responses.pop()
     assert r3.user_id == DEFAULT_TAGGED_USER_ID_INVITE_USER
     assert r3.text == f'{LINE_INVITE_USER_YOU_WERE_INVITED} {DEFAULT_TEAM_NAME_INVITE_USER} {LINE_INVITE_USER_BY} [[{DEFAULT_USER_ID_INVITE_USER}]]\n\n{CMD_ACCEPT_INVITE}{team_id} -- {LINE_INVITE_USER_ACCEPT}\n{CMD_REJECT_INVITE}{team_id} -- {LINE_INVITE_USER_REJECT}'
+
+
+def test_accept_invitation():
+    # create team
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_ID_ACCEPT_INVITATION,
+        text=CMD_CREATE_TEAM
+    )
+    responses = list(stub.HandleMessage(msg))
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_ID_ACCEPT_INVITATION,
+        text=DEFAULT_TEAM_NAME_ACCEPT_INVITATION
+    )
+    responses = list(stub.HandleMessage(msg))
+    # send invite user command
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_ID_ACCEPT_INVITATION,
+        text=CMD_INVITE_MEMBER
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 1
+    r = responses.pop()
+    assert r.user_id == DEFAULT_USER_ID_ACCEPT_INVITATION
+    assert PATTERN_TEAM_OPTION_ACCEPT_INVITATION.match(r.text)
+    # send team option
+    team_id = r.text
+    team_id = re.sub(CMD_INVITE_MEMBER, "", team_id)
+    team_id = re.sub(f" -- {DEFAULT_TEAM_NAME_ACCEPT_INVITATION}\n", "", team_id)
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_ID_ACCEPT_INVITATION,
+        text=f"{CMD_INVITE_MEMBER}{team_id}"
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 1
+    r = responses.pop()
+    assert r.user_id == DEFAULT_USER_ID_ACCEPT_INVITATION
+    assert r.text == "Tag one or multiple users"
+    # send tagged user id
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_ID_ACCEPT_INVITATION,
+        text=f"[[{DEFAULT_TAGGED_USER_ID_ACCEPT_INVITATION}]]"
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 3
+    r1 = responses.pop()
+    assert r1.user_id == DEFAULT_USER_ID_ACCEPT_INVITATION
+    assert r1.text == LINE_HELP
+    r2 = responses.pop()
+    assert r2.user_id == DEFAULT_USER_ID_ACCEPT_INVITATION
+    assert r2.text == LINE_INVITE_USER_INVITATIONS_WERE_SEND
+    r3 = responses.pop()
+    assert r3.user_id == DEFAULT_TAGGED_USER_ID_ACCEPT_INVITATION
+    assert r3.text == f'{LINE_INVITE_USER_YOU_WERE_INVITED} {DEFAULT_TEAM_NAME_ACCEPT_INVITATION} {LINE_INVITE_USER_BY} [[{DEFAULT_USER_ID_ACCEPT_INVITATION}]]\n\n{CMD_ACCEPT_INVITE}{team_id} -- {LINE_INVITE_USER_ACCEPT}\n{CMD_REJECT_INVITE}{team_id} -- {LINE_INVITE_USER_REJECT}'
+    # send accept invitation command
+    msg = um.UserMessage(
+        user_id=DEFAULT_TAGGED_USER_ID_ACCEPT_INVITATION,
+        text=f"{CMD_ACCEPT_INVITE}{team_id}"
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 2
+    r1 = responses.pop()
+    assert r1.user_id == DEFAULT_USER_ID_ACCEPT_INVITATION
+    assert r1.text == f"[[{DEFAULT_TAGGED_USER_ID_ACCEPT_INVITATION}]] {LINE_ACCEPT_INVITATION_ACCEPTED_INVITATION}"
+    r2 = responses.pop()
+    assert r2.user_id == DEFAULT_TAGGED_USER_ID_ACCEPT_INVITATION
+    assert r2.text == f"{LINE_ACCEPT_INVITATION_ACCEPTED}!"
+
+
+def test_reject_invitation():
+    # create team
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_ID_REJECT_INVITATION,
+        text=CMD_CREATE_TEAM
+    )
+    responses = list(stub.HandleMessage(msg))
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_ID_REJECT_INVITATION,
+        text=DEFAULT_TEAM_NAME_REJECT_INVITATION
+    )
+    responses = list(stub.HandleMessage(msg))
+    # send invite user command
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_ID_REJECT_INVITATION,
+        text=CMD_INVITE_MEMBER
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 1
+    r = responses.pop()
+    assert r.user_id == DEFAULT_USER_ID_REJECT_INVITATION
+    assert PATTERN_TEAM_OPTION_REJECT_INVITATION.match(r.text)
+    # send team option
+    team_id = r.text
+    team_id = re.sub(CMD_INVITE_MEMBER, "", team_id)
+    team_id = re.sub(f" -- {DEFAULT_TEAM_NAME_REJECT_INVITATION}\n", "", team_id)
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_ID_REJECT_INVITATION,
+        text=f"{CMD_INVITE_MEMBER}{team_id}"
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 1
+    r = responses.pop()
+    assert r.user_id == DEFAULT_USER_ID_REJECT_INVITATION
+    assert r.text == "Tag one or multiple users"
+    # send tagged user id
+    msg = um.UserMessage(
+        user_id=DEFAULT_USER_ID_REJECT_INVITATION,
+        text=f"[[{DEFAULT_TAGGED_USER_ID_REJECT_INVITATION}]]"
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 3
+    r1 = responses.pop()
+    assert r1.user_id == DEFAULT_USER_ID_REJECT_INVITATION
+    assert r1.text == LINE_HELP
+    r2 = responses.pop()
+    assert r2.user_id == DEFAULT_USER_ID_REJECT_INVITATION
+    assert r2.text == LINE_INVITE_USER_INVITATIONS_WERE_SEND
+    r3 = responses.pop()
+    assert r3.user_id == DEFAULT_TAGGED_USER_ID_REJECT_INVITATION
+    assert r3.text == f'{LINE_INVITE_USER_YOU_WERE_INVITED} {DEFAULT_TEAM_NAME_REJECT_INVITATION} {LINE_INVITE_USER_BY} [[{DEFAULT_USER_ID_REJECT_INVITATION}]]\n\n{CMD_ACCEPT_INVITE}{team_id} -- {LINE_INVITE_USER_ACCEPT}\n{CMD_REJECT_INVITE}{team_id} -- {LINE_INVITE_USER_REJECT}'
+    # send reject invitation command
+    msg = um.UserMessage(
+        user_id=DEFAULT_TAGGED_USER_ID_REJECT_INVITATION,
+        text=f"{CMD_REJECT_INVITE}{team_id}"
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 2
+    r1 = responses.pop()
+    assert r1.user_id == DEFAULT_USER_ID_REJECT_INVITATION
+    assert r1.text == f"[[{DEFAULT_TAGGED_USER_ID_REJECT_INVITATION}]] {LINE_REJECT_INVITATION_REJECTED_INVITATION}"
+    r2 = responses.pop()
+    assert r2.user_id == DEFAULT_TAGGED_USER_ID_REJECT_INVITATION
+    assert r2.text == f"{LINE_REJECT_INVITATION_REJECTED}!"
