@@ -14,3 +14,19 @@ def test_test():
     )
     responses = list(stub.HandleMessage(msg))
     assert len(responses) == 1
+
+
+def test_test_2():
+    msg = um.UserMessage(
+        user_id=1,
+        text='/create_team'
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 1
+
+    msg = um.UserMessage(
+        user_id=1,
+        text='gay bar'
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 2
