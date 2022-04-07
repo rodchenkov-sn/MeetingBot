@@ -1,4 +1,3 @@
-import pytest
 import grpc
 import re
 
@@ -100,17 +99,29 @@ def test_create_team():
 
 
 def test_invite_user():
-    # create team
+    # send create team command
     msg = um.UserMessage(
         user_id=DEFAULT_USER_ID_INVITE_USER,
         text=CMD_CREATE_TEAM
     )
     responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 1
+    r = responses.pop()
+    assert r.user_id == DEFAULT_USER_ID_INVITE_USER
+    assert r.text == LINE_CREATE_TEAM_ENTER_NAME
+    # send team name
     msg = um.UserMessage(
         user_id=DEFAULT_USER_ID_INVITE_USER,
         text=DEFAULT_TEAM_NAME_INVITE_USER
     )
     responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 2
+    r1 = responses.pop()
+    assert r1.user_id == DEFAULT_USER_ID_INVITE_USER
+    assert r1.text == LINE_HELP
+    r2 = responses.pop()
+    assert r2.user_id == DEFAULT_USER_ID_INVITE_USER
+    assert r2.text == f"{DEFAULT_TEAM_NAME_INVITE_USER} {LINE_CREATE_TEAM_TEAM_CREATED}!"
     # send invite user command
     msg = um.UserMessage(
         user_id=DEFAULT_USER_ID_INVITE_USER,
@@ -153,17 +164,29 @@ def test_invite_user():
 
 
 def test_accept_invitation():
-    # create team
+    # send create team command
     msg = um.UserMessage(
         user_id=DEFAULT_USER_ID_ACCEPT_INVITATION,
         text=CMD_CREATE_TEAM
     )
     responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 1
+    r = responses.pop()
+    assert r.user_id == DEFAULT_USER_ID_ACCEPT_INVITATION
+    assert r.text == LINE_CREATE_TEAM_ENTER_NAME
+    # send team name
     msg = um.UserMessage(
         user_id=DEFAULT_USER_ID_ACCEPT_INVITATION,
         text=DEFAULT_TEAM_NAME_ACCEPT_INVITATION
     )
     responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 2
+    r1 = responses.pop()
+    assert r1.user_id == DEFAULT_USER_ID_ACCEPT_INVITATION
+    assert r1.text == LINE_HELP
+    r2 = responses.pop()
+    assert r2.user_id == DEFAULT_USER_ID_ACCEPT_INVITATION
+    assert r2.text == f"{DEFAULT_TEAM_NAME_ACCEPT_INVITATION} {LINE_CREATE_TEAM_TEAM_CREATED}!"
     # send invite user command
     msg = um.UserMessage(
         user_id=DEFAULT_USER_ID_ACCEPT_INVITATION,
@@ -219,17 +242,29 @@ def test_accept_invitation():
 
 
 def test_reject_invitation():
-    # create team
+    # send create team command
     msg = um.UserMessage(
         user_id=DEFAULT_USER_ID_REJECT_INVITATION,
         text=CMD_CREATE_TEAM
     )
     responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 1
+    r = responses.pop()
+    assert r.user_id == DEFAULT_USER_ID_REJECT_INVITATION
+    assert r.text == LINE_CREATE_TEAM_ENTER_NAME
+    # send team name
     msg = um.UserMessage(
         user_id=DEFAULT_USER_ID_REJECT_INVITATION,
         text=DEFAULT_TEAM_NAME_REJECT_INVITATION
     )
     responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 2
+    r1 = responses.pop()
+    assert r1.user_id == DEFAULT_USER_ID_REJECT_INVITATION
+    assert r1.text == LINE_HELP
+    r2 = responses.pop()
+    assert r2.user_id == DEFAULT_USER_ID_REJECT_INVITATION
+    assert r2.text == f"{DEFAULT_TEAM_NAME_REJECT_INVITATION} {LINE_CREATE_TEAM_TEAM_CREATED}!"
     # send invite user command
     msg = um.UserMessage(
         user_id=DEFAULT_USER_ID_REJECT_INVITATION,
