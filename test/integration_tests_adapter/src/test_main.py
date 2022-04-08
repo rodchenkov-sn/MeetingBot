@@ -20,20 +20,19 @@ DEFAULT_USER_ID_REJECT_INVITATION = 7
 DEFAULT_TAGGED_USER_ID_REJECT_INVITATION = 8
 DEFAULT_USER_ID_START = 9
 DEFAULT_USER_ID_CHANGE_LANGUAGE = 10
-DEFAULT_USER_ID_CREATE_MEETING = 11
+DEFAULT_USER_ID_CREATE_MEETING_TEAM_OWNER = 11
 # team name
 DEFAULT_TEAM_NAME_CREATE_TEAM = 'gay team'
 DEFAULT_TEAM_NAME_INVITE_USER = 'sad team'
 DEFAULT_TEAM_NAME_ACCEPT_INVITATION = 'wide team'
 DEFAULT_TEAM_NAME_REJECT_INVITATION = 'tight team'
-DEFAULT_TEAM_NAME_CREATE_MEETING = 'sleepy team'
+DEFAULT_TEAM_NAME_CREATE_MEETING_TEAM_OWNER = 'sleepy team'
 # meeting desc
-DEFAULT_MEETING_DESC_CREATE_MEETING = "gay meeting"
+DEFAULT_MEETING_DESC_CREATE_MEETING_TEAM_OWNER = "gay meeting"
 # meeting time
-DEFAULT_MEETING_TIME_INVALID = "123 456"
-DEFAULT_MEETING_TIME_STR = "11-11-2022 11:11"
-DEFAULT_MEETING_TIME_PARSED = datetime.strptime(DEFAULT_MEETING_TIME_STR, '%d-%m-%Y %H:%M')
-DEFAULT_MEETING_TIME_INT = int(DEFAULT_MEETING_TIME_PARSED.timestamp())
+DEFAULT_MEETING_TIME_INVALID_CREATE_MEETING_TEAM_OWNER = "123 456"
+DEFAULT_MEETING_TIME_STR_CREATE_MEETING_TEAM_OWNER = "11-11-2022 11:11"
+DEFAULT_MEETING_TIME_PARSED_CREATE_MEETING_TEAM_OWNER = datetime.strptime(DEFAULT_MEETING_TIME_STR_CREATE_MEETING_TEAM_OWNER, '%d-%m-%Y %H:%M')
 # language
 DEFAULT_LANGUAGE_NAME_EN = 'en'
 DEFAULT_LANGUAGE_NAME_RU = 'ru'
@@ -95,11 +94,12 @@ LINE_CHANGE_LANGUAGE_CHANGED_RU = "Язык сменен"
 LINE_CREATE_MEETING_ENTER_DESCRIPTION = "Enter description"
 LINE_CREATE_MEETING_ENTER_DATETIME = "Enter datetime (in format DD-MM-YYYY HH:MM)"
 LINE_CREATE_MEETING_TRY_AGAIN = "try again!"
+LINE_CREATE_MEETING_MEETING_CREATED = "Meeting created"
 # pattern
 PATTERN_TEAM_OPTION_INVITE_USER = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_INVITE_USER}\n")
 PATTERN_TEAM_OPTION_ACCEPT_INVITATION = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_ACCEPT_INVITATION}\n")
 PATTERN_TEAM_OPTION_REJECT_INVITATION = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_REJECT_INVITATION}\n")
-PATTERN_TEAM_OPTION_CREATE_MEETING = re.compile(rf"{CMD_CREATE_MEETING}[0-9]+ -- {DEFAULT_TEAM_NAME_CREATE_MEETING}\n")
+PATTERN_TEAM_OPTION_CREATE_MEETING_TEAM_OWNER = re.compile(rf"{CMD_CREATE_MEETING}[0-9]+ -- {DEFAULT_TEAM_NAME_CREATE_MEETING_TEAM_OWNER}\n")
 
 
 def test_help(
@@ -316,57 +316,74 @@ def test_change_language(
     assert r2.text == _line_change_lang_changed
 
 
-def test_create_meeting_invalid_time(
-    _user_id=DEFAULT_USER_ID_CREATE_MEETING,
-    _team_name=DEFAULT_TEAM_NAME_CREATE_MEETING,
-    _team_option_pattern=PATTERN_TEAM_OPTION_CREATE_MEETING,
-    _meeting_datetime=DEFAULT_MEETING_TIME_INVALID
+def test_create_meeting_team_owner(
+    _team_owner_id=DEFAULT_USER_ID_CREATE_MEETING_TEAM_OWNER,
+    _team_name=DEFAULT_TEAM_NAME_CREATE_MEETING_TEAM_OWNER,
+    _team_option_pattern=PATTERN_TEAM_OPTION_CREATE_MEETING_TEAM_OWNER,
+    _meeting_datetime_invalid=DEFAULT_MEETING_TIME_INVALID_CREATE_MEETING_TEAM_OWNER,
+    _meeting_datetime_str=DEFAULT_MEETING_TIME_STR_CREATE_MEETING_TEAM_OWNER,
+    _meeting_datetime_parsed=DEFAULT_MEETING_TIME_PARSED_CREATE_MEETING_TEAM_OWNER,
+    _meeting_desc=DEFAULT_MEETING_DESC_CREATE_MEETING_TEAM_OWNER
 ):
     # create team
     test_create_team(
-        _user_id=_user_id,
+        _user_id=_team_owner_id,
         _team_name=_team_name
     )
     # send create meeting command
     msg = um.UserMessage(
-        user_id=_user_id,
+        user_id=_team_owner_id,
         text=CMD_CREATE_MEETING
     )
     responses = list(stub.HandleMessage(msg))
     assert len(responses) == 1
     r = responses.pop()
-    assert r.user_id == _user_id
+    assert r.user_id == _team_owner_id
     assert _team_option_pattern.match(r.text)
     # send team option
     team_id = r.text
     team_id = re.sub(CMD_CREATE_MEETING, "", team_id)
     team_id = re.sub(f" -- {_team_name}\n", "", team_id)
     msg = um.UserMessage(
-        user_id=_user_id,
+        user_id=_team_owner_id,
         text=f"{CMD_CREATE_MEETING}{team_id}"
     )
     responses = list(stub.HandleMessage(msg))
     assert len(responses) == 1
     r = responses.pop()
-    assert r.user_id == _user_id
+    assert r.user_id == _team_owner_id
     assert r.text == f"{LINE_CREATE_MEETING_ENTER_DESCRIPTION}:"
     # send meeting description
     msg = um.UserMessage(
-        user_id=_user_id,
-        text=DEFAULT_MEETING_DESC_CREATE_MEETING
+        user_id=_team_owner_id,
+        text=DEFAULT_MEETING_DESC_CREATE_MEETING_TEAM_OWNER
     )
     responses = list(stub.HandleMessage(msg))
     assert len(responses) == 1
     r = responses.pop()
-    assert r.user_id == _user_id
+    assert r.user_id == _team_owner_id
     assert r.text == f"{LINE_CREATE_MEETING_ENTER_DATETIME}:"
-    # send meeting datetime
+    # send invalid meeting datetime
     msg = um.UserMessage(
-        user_id=_user_id,
-        text=_meeting_datetime
+        user_id=_team_owner_id,
+        text=_meeting_datetime_invalid
     )
     responses = list(stub.HandleMessage(msg))
     assert len(responses) == 1
     r = responses.pop()
-    assert r.user_id == _user_id
+    assert r.user_id == _team_owner_id
     assert r.text == LINE_CREATE_MEETING_TRY_AGAIN
+    # send valid meeting datetime
+    msg = um.UserMessage(
+        user_id=_team_owner_id,
+        text=_meeting_datetime_str
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 2
+    r1 = responses.pop()
+    assert r1.user_id == _team_owner_id
+    assert r1.text == f"{_meeting_desc} in T - 5!"
+    assert r1.timestamp == int((_meeting_datetime_parsed - timedelta(minutes=5)).timestamp())
+    r2 = responses.pop()
+    assert r2.user_id == _team_owner_id
+    assert r2.text == f"{LINE_CREATE_MEETING_MEETING_CREATED}!"
