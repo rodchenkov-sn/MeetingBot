@@ -25,6 +25,8 @@ DEFAULT_TEAM_OWNER_ID_INVITE_TO_MEETING = 12
 DEFAULT_INVITED_USER_ID_INVITE_TO_MEETING = 13
 DEFAULT_TEAM_OWNER_ID_ACCEPT_MEETING_INVITATION = 14
 DEFAULT_INVITED_USER_ID_ACCEPT_MEETING_INVITATION = 15
+DEFAULT_TEAM_OWNER_ID_REJECT_MEETING_INVITATION = 16
+DEFAULT_INVITED_USER_ID_REJECT_MEETING_INVITATION = 17
 # team name
 DEFAULT_TEAM_NAME_CREATE_TEAM = 'gay team'
 DEFAULT_TEAM_NAME_INVITE_TO_TEAM = 'sad team'
@@ -33,10 +35,12 @@ DEFAULT_TEAM_NAME_REJECT_TEAM_INVITATION = 'tight team'
 DEFAULT_TEAM_NAME_CREATE_MEETING = 'sleepy team'
 DEFAULT_TEAM_NAME_INVITE_TO_MEETING = 'salty team'
 DEFAULT_TEAM_NAME_ACCEPT_MEETING_INVITATION = 'random team'
+DEFAULT_TEAM_NAME_REJECT_MEETING_INVITATION = 'concrete team'
 # meeting desc
 DEFAULT_MEETING_DESC_CREATE_MEETING = "gay meeting"
 DEFAULT_MEETING_DESC_INVITE_TO_MEETING = "salty meeting"
 DEFAULT_MEETING_DESC_ACCEPT_MEETING_INVITATION = "random meeting"
+DEFAULT_MEETING_DESC_REJECT_MEETING_INVITATION = "concrete meeting"
 # meeting time
 DEFAULT_MEETING_TIME_INVALID_CREATE_MEETING = "123 456"
 DEFAULT_MEETING_TIME_STR_CREATE_MEETING = "11-11-2022 11:11"
@@ -45,6 +49,9 @@ DEFAULT_MEETING_DATETIME_STR_INVITE_TO_MEETING = "10-10-2022 10:10"
 DEFAULT_MEETING_DATETIME_PARSED_INVITE_TO_MEETING = datetime.strptime(DEFAULT_MEETING_DATETIME_STR_INVITE_TO_MEETING, '%d-%m-%Y %H:%M')
 DEFAULT_MEETING_DATETIME_STR_ACCEPT_MEETING_INVITATION = "12-12-2022 12:12"
 DEFAULT_MEETING_DATETIME_PARSED_ACCEPT_MEETING_INVITATION = datetime.strptime(DEFAULT_MEETING_DATETIME_STR_ACCEPT_MEETING_INVITATION, '%d-%m-%Y %H:%M')
+DEFAULT_MEETING_DATETIME_INT_ACCEPT_MEETING_INVITATION = int(DEFAULT_MEETING_DATETIME_PARSED_ACCEPT_MEETING_INVITATION.timestamp())
+DEFAULT_MEETING_DATETIME_STR_REJECT_MEETING_INVITATION = "09-09-2022 09:09"
+DEFAULT_MEETING_DATETIME_PARSED_REJECT_MEETING_INVITATION = datetime.strptime(DEFAULT_MEETING_DATETIME_STR_REJECT_MEETING_INVITATION, '%d-%m-%Y %H:%M')
 # language
 DEFAULT_LANGUAGE_NAME_EN = 'en'
 DEFAULT_LANGUAGE_NAME_RU = 'ru'
@@ -60,6 +67,8 @@ CMD_CREATE_MEETING = "/create_meeting"
 CMD_INVITE_TO_MEETING = "/invite_to_meeting"
 CMD_ACCEPT_MEETING_INVITE = "/accept_meeting_invite"
 CMD_REJECT_MEETING_INVITE = "/reject_meeting_invite"
+CMD_POM = "/pom"
+CMD_AOM = "/aom"
 # line
 LINE_HELP_EN = f"/create_team - to add team\n" \
     f"/invite_member - to invite user\n" \
@@ -113,18 +122,26 @@ LINE_CREATE_MEETING_MEETING_CREATED = "Meeting created"
 LINE_INVITE_TO_MEETING_TAG = "Tag one or multiple users"
 LINE_INVITING_TO_MEETING_INVITATIONS_SEND = "Invitations to meeting were send"
 LINE_INVITING_TO_MEETING_YOU_WERE_INVITED = "You were invited to meeting"
+LINE_REJECT_MEETING_INVITATION_REJECTED = "rejected meeting invitation"
+LINE_REJECT_MEETING_INVITATION_YOU_REJECTED = "You rejected meeting invitation"
+LINE_ACCEPT_MEETING_INVITATION_ACCEPTED = "accepted meeting invitation"
+LINE_ACCEPT_MEETING_INVITATION_YOU_ACCEPTED = "You accepted meeting invitation"
+LINE_ACCEPT_MEETING_INVITATION_MEETING_STARTS_AT = "meeting starts at"
 # team option pattern
 PATTERN_TEAM_OPTION_INVITE_TO_TEAM = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_INVITE_TO_TEAM}\n")
 PATTERN_TEAM_OPTION_ACCEPT_TEAM_INVITATION = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_ACCEPT_TEAM_INVITATION}\n")
 PATTERN_TEAM_OPTION_REJECT_TEAM_INVITATION = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_REJECT_TEAM_INVITATION}\n")
 PATTERN_TEAM_OPTION_CREATE_MEETING = re.compile(rf"{CMD_CREATE_MEETING}[0-9]+ -- {DEFAULT_TEAM_NAME_CREATE_MEETING}\n")
 PATTERN_TEAM_OPTION_ACCEPT_TEAM_INVITATION_INVITE_TO_MEETING = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_INVITE_TO_MEETING}\n")
-PATTERN_TEAM_OPTION_ACCEPT_INVITATION_ACCEPT_MEETING_INVITATION = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_ACCEPT_MEETING_INVITATION}\n")
 PATTERN_TEAM_OPTION_CREATE_MEETING_INVITE_TO_MEETING = re.compile(rf"{CMD_CREATE_MEETING}[0-9]+ -- {DEFAULT_TEAM_NAME_INVITE_TO_MEETING}\n")
+PATTERN_TEAM_OPTION_ACCEPT_TEAM_INVITATION_ACCEPT_MEETING_INVITATION = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_ACCEPT_MEETING_INVITATION}\n")
 PATTERN_TEAM_OPTION_CREATE_MEETING_ACCEPT_MEETING_INVITATION = re.compile(rf"{CMD_CREATE_MEETING}[0-9]+ -- {DEFAULT_TEAM_NAME_ACCEPT_MEETING_INVITATION}\n")
+PATTERN_TEAM_OPTION_ACCEPT_TEAM_INVITATION_REJECT_MEETING_INVITATION = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_REJECT_MEETING_INVITATION}\n")
+PATTERN_TEAM_OPTION_CREATE_MEETING_REJECT_MEETING_INVITATION = re.compile(rf"{CMD_CREATE_MEETING}[0-9]+ -- {DEFAULT_TEAM_NAME_REJECT_MEETING_INVITATION}\n")
 # meeting option pattern
 PATTERN_MEETING_OPTION_INVITE_TO_MEETING_INVITE_TO_MEETING = re.compile(rf"{CMD_INVITE_TO_MEETING}[0-9]+ -- {DEFAULT_MEETING_DESC_INVITE_TO_MEETING}\n")
 PATTERN_MEETING_OPTION_INVITE_TO_MEETING_ACCEPT_MEETING_INVITATION = re.compile(rf"{CMD_INVITE_TO_MEETING}[0-9]+ -- {DEFAULT_MEETING_DESC_ACCEPT_MEETING_INVITATION}\n")
+PATTERN_MEETING_OPTION_INVITE_TO_MEETING_REJECT_MEETING_INVITATION = re.compile(rf"{CMD_INVITE_TO_MEETING}[0-9]+ -- {DEFAULT_MEETING_DESC_REJECT_MEETING_INVITATION}\n")
 
 
 def test_help(
@@ -419,7 +436,7 @@ def test_invite_to_meeting(
     _team_owner_id=DEFAULT_TEAM_OWNER_ID_INVITE_TO_MEETING,
     _invited_user_id=DEFAULT_INVITED_USER_ID_INVITE_TO_MEETING,
     _team_name=DEFAULT_TEAM_NAME_INVITE_TO_MEETING,
-    _team_option_pattern_accept_invitation=PATTERN_TEAM_OPTION_ACCEPT_TEAM_INVITATION_INVITE_TO_MEETING,
+    _team_option_pattern_accept_team_invitation=PATTERN_TEAM_OPTION_ACCEPT_TEAM_INVITATION_INVITE_TO_MEETING,
     _team_option_pattern_create_meeting=PATTERN_TEAM_OPTION_CREATE_MEETING_INVITE_TO_MEETING,
     _meeting_desc=DEFAULT_MEETING_DESC_INVITE_TO_MEETING,
     _meeting_datetime_str=DEFAULT_MEETING_DATETIME_STR_INVITE_TO_MEETING,
@@ -430,7 +447,7 @@ def test_invite_to_meeting(
     team_id = test_accept_team_invitation(
         _user_id=_team_owner_id,
         _team_name=_team_name,
-        _team_option_pattern=_team_option_pattern_accept_invitation,
+        _team_option_pattern=_team_option_pattern_accept_team_invitation,
         _invited_user_id=_invited_user_id
     )
     # send create meeting command
@@ -526,7 +543,7 @@ def test_accept_invite_to_meeting(
         _team_owner_id=DEFAULT_TEAM_OWNER_ID_ACCEPT_MEETING_INVITATION,
         _invited_user_id=DEFAULT_INVITED_USER_ID_ACCEPT_MEETING_INVITATION,
         _team_name=DEFAULT_TEAM_NAME_ACCEPT_MEETING_INVITATION,
-        _team_option_pattern_accept_invitation=PATTERN_TEAM_OPTION_ACCEPT_INVITATION_ACCEPT_MEETING_INVITATION,
+        _team_option_pattern_accept_team_invitation=PATTERN_TEAM_OPTION_ACCEPT_TEAM_INVITATION_ACCEPT_MEETING_INVITATION,
         _team_option_pattern_create_meeting=PATTERN_TEAM_OPTION_CREATE_MEETING_ACCEPT_MEETING_INVITATION,
         _meeting_desc=DEFAULT_MEETING_DESC_ACCEPT_MEETING_INVITATION,
         _meeting_datetime_str=DEFAULT_MEETING_DATETIME_STR_ACCEPT_MEETING_INVITATION,
@@ -537,10 +554,67 @@ def test_accept_invite_to_meeting(
         _team_owner_id=_team_owner_id,
         _invited_user_id=_invited_user_id,
         _team_name=_team_name,
-        _team_option_pattern_accept_invitation=_team_option_pattern_accept_invitation,
+        _team_option_pattern_accept_team_invitation=_team_option_pattern_accept_team_invitation,
         _team_option_pattern_create_meeting=_team_option_pattern_create_meeting,
         _meeting_desc=_meeting_desc,
         _meeting_datetime_str=_meeting_datetime_str,
         _meeting_datetime_parsed=_meeting_datetime_parsed,
         _meeting_option_pattern_invite_to_meeting=_meeting_option_pattern_invite_to_meeting
     )
+    # send accept meeting invite command
+    msg = um.UserMessage(
+        user_id=_invited_user_id,
+        text=f"{CMD_ACCEPT_MEETING_INVITE}{meeting_id}"
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 4
+    r1 = responses.pop()
+    assert r1.user_id == _team_owner_id
+    assert r1.text == f'[[{_invited_user_id}]] {LINE_ACCEPT_MEETING_INVITATION_ACCEPTED}'
+    r2 = responses.pop()
+    assert r2.user_id == _invited_user_id
+    meeting_date = datetime.fromtimestamp(DEFAULT_MEETING_DATETIME_INT_ACCEPT_MEETING_INVITATION)
+    assert r2.text == f'{_meeting_desc} {LINE_ACCEPT_MEETING_INVITATION_MEETING_STARTS_AT} {meeting_date}'
+    r3 = responses.pop()
+    assert r3.user_id == _invited_user_id
+    assert r3.text == f'{LINE_ACCEPT_MEETING_INVITATION_YOU_ACCEPTED}'
+    r4 = responses.pop()
+    assert r4.user_id == _invited_user_id
+    assert r4.text == f'{_meeting_desc} in T - 5!\n\n{CMD_POM}{meeting_id} -- heading!\n{CMD_AOM}{meeting_id} -- ignore'
+
+
+def test_reject_invite_to_meeting(
+        _team_owner_id=DEFAULT_TEAM_OWNER_ID_REJECT_MEETING_INVITATION,
+        _invited_user_id=DEFAULT_INVITED_USER_ID_REJECT_MEETING_INVITATION,
+        _team_name=DEFAULT_TEAM_NAME_REJECT_MEETING_INVITATION,
+        _team_option_pattern_accept_team_invitation=PATTERN_TEAM_OPTION_ACCEPT_TEAM_INVITATION_REJECT_MEETING_INVITATION,
+        _team_option_pattern_create_meeting=PATTERN_TEAM_OPTION_CREATE_MEETING_REJECT_MEETING_INVITATION,
+        _meeting_desc=DEFAULT_MEETING_DESC_REJECT_MEETING_INVITATION,
+        _meeting_datetime_str=DEFAULT_MEETING_DATETIME_STR_REJECT_MEETING_INVITATION,
+        _meeting_datetime_parsed=DEFAULT_MEETING_DATETIME_PARSED_REJECT_MEETING_INVITATION,
+        _meeting_option_pattern_invite_to_meeting=PATTERN_MEETING_OPTION_INVITE_TO_MEETING_REJECT_MEETING_INVITATION
+):
+    meeting_id = test_invite_to_meeting(
+        _team_owner_id=_team_owner_id,
+        _invited_user_id=_invited_user_id,
+        _team_name=_team_name,
+        _team_option_pattern_accept_team_invitation=_team_option_pattern_accept_team_invitation,
+        _team_option_pattern_create_meeting=_team_option_pattern_create_meeting,
+        _meeting_desc=_meeting_desc,
+        _meeting_datetime_str=_meeting_datetime_str,
+        _meeting_datetime_parsed=_meeting_datetime_parsed,
+        _meeting_option_pattern_invite_to_meeting=_meeting_option_pattern_invite_to_meeting
+    )
+    # send reject meeting invite command
+    msg = um.UserMessage(
+        user_id=_invited_user_id,
+        text=f"{CMD_REJECT_MEETING_INVITE}{meeting_id}"
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 2
+    r1 = responses.pop()
+    assert r1.user_id == _team_owner_id
+    assert r1.text == f'[[{_invited_user_id}]] {LINE_REJECT_MEETING_INVITATION_REJECTED}'
+    r2 = responses.pop()
+    assert r2.user_id == _invited_user_id
+    assert r2.text == LINE_REJECT_MEETING_INVITATION_YOU_REJECTED
