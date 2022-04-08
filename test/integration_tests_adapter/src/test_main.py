@@ -1,6 +1,8 @@
 import grpc
 import re
 
+from datetime import datetime, timedelta
+
 import user_message_pb2_grpc as ums
 import user_message_pb2 as um
 
@@ -18,12 +20,21 @@ DEFAULT_USER_ID_REJECT_INVITATION = 7
 DEFAULT_TAGGED_USER_ID_REJECT_INVITATION = 8
 DEFAULT_USER_ID_START = 9
 DEFAULT_USER_ID_CHANGE_LANGUAGE = 10
+DEFAULT_USER_ID_CREATE_MEETING = 11
 # team name
 DEFAULT_TEAM_NAME_CREATE_TEAM = 'gay team'
 DEFAULT_TEAM_NAME_INVITE_USER = 'sad team'
 DEFAULT_TEAM_NAME_ACCEPT_INVITATION = 'wide team'
 DEFAULT_TEAM_NAME_REJECT_INVITATION = 'tight team'
-#language
+DEFAULT_TEAM_NAME_CREATE_MEETING = 'sleepy team'
+# meeting desc
+DEFAULT_MEETING_DESC_CREATE_MEETING = "gay meeting"
+# meeting time
+DEFAULT_MEETING_TIME_INVALID = "123 456"
+DEFAULT_MEETING_TIME_STR = "11-11-2022 11:11"
+DEFAULT_MEETING_TIME_PARSED = datetime.strptime(DEFAULT_MEETING_TIME_STR, '%d-%m-%Y %H:%M')
+DEFAULT_MEETING_TIME_INT = int(DEFAULT_MEETING_TIME_PARSED.timestamp())
+# language
 DEFAULT_LANGUAGE_NAME_EN = 'en'
 DEFAULT_LANGUAGE_NAME_RU = 'ru'
 # cmd
@@ -34,6 +45,7 @@ CMD_ACCEPT_INVITE = "/accept_invite"
 CMD_REJECT_INVITE = "/reject_invite"
 CMD_START = "/start"
 CMD_CHANGE_LANGUAGE = "/change_language"
+CMD_CREATE_MEETING = "/create_meeting"
 # line
 LINE_HELP_EN = f"/create_team - to add team\n" \
     f"/invite_member - to invite user\n" \
@@ -80,10 +92,14 @@ LINE_CHANGE_LANGUAGE_RU_NAME_EN = "Russian"
 LINE_CHANGE_LANGUAGE_RU_NAME_RU = "Русский"
 LINE_CHANGE_LANGUAGE_CHANGED_EN = "Language changed"
 LINE_CHANGE_LANGUAGE_CHANGED_RU = "Язык сменен"
+LINE_CREATE_MEETING_ENTER_DESCRIPTION = "Enter description"
+LINE_CREATE_MEETING_ENTER_DATETIME = "Enter datetime (in format DD-MM-YYYY HH:MM)"
+LINE_CREATE_MEETING_TRY_AGAIN = "try again!"
 # pattern
 PATTERN_TEAM_OPTION_INVITE_USER = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_INVITE_USER}\n")
 PATTERN_TEAM_OPTION_ACCEPT_INVITATION = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_ACCEPT_INVITATION}\n")
 PATTERN_TEAM_OPTION_REJECT_INVITATION = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_REJECT_INVITATION}\n")
+PATTERN_TEAM_OPTION_CREATE_MEETING = re.compile(rf"{CMD_CREATE_MEETING}[0-9]+ -- {DEFAULT_TEAM_NAME_CREATE_MEETING}\n")
 
 
 def test_help(
@@ -298,3 +314,59 @@ def test_change_language(
     r2 = responses.pop()
     assert r2.user_id == _user_id
     assert r2.text == _line_change_lang_changed
+
+
+def test_create_meeting_invalid_time(
+    _user_id=DEFAULT_USER_ID_CREATE_MEETING,
+    _team_name=DEFAULT_TEAM_NAME_CREATE_MEETING,
+    _team_option_pattern=PATTERN_TEAM_OPTION_CREATE_MEETING,
+    _meeting_datetime=DEFAULT_MEETING_TIME_INVALID
+):
+    # create team
+    test_create_team(
+        _user_id=_user_id,
+        _team_name=_team_name
+    )
+    # send create meeting command
+    msg = um.UserMessage(
+        user_id=_user_id,
+        text=CMD_CREATE_MEETING
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 1
+    r = responses.pop()
+    assert r.user_id == _user_id
+    assert _team_option_pattern.match(r.text)
+    # send team option
+    team_id = r.text
+    team_id = re.sub(CMD_CREATE_MEETING, "", team_id)
+    team_id = re.sub(f" -- {_team_name}\n", "", team_id)
+    msg = um.UserMessage(
+        user_id=_user_id,
+        text=f"{CMD_CREATE_MEETING}{team_id}"
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 1
+    r = responses.pop()
+    assert r.user_id == _user_id
+    assert r.text == f"{LINE_CREATE_MEETING_ENTER_DESCRIPTION}:"
+    # send meeting description
+    msg = um.UserMessage(
+        user_id=_user_id,
+        text=DEFAULT_MEETING_DESC_CREATE_MEETING
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 1
+    r = responses.pop()
+    assert r.user_id == _user_id
+    assert r.text == f"{LINE_CREATE_MEETING_ENTER_DATETIME}:"
+    # send meeting datetime
+    msg = um.UserMessage(
+        user_id=_user_id,
+        text=_meeting_datetime
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 1
+    r = responses.pop()
+    assert r.user_id == _user_id
+    assert r.text == LINE_CREATE_MEETING_TRY_AGAIN

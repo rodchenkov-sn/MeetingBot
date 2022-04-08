@@ -180,15 +180,14 @@ class CreateMeetingCmdHandler(RequestHandler):
         text = request.text
         state = self.__states.get_state(uid)
         if text == '/create_meeting':
-            msg = ''
+            response = []
             teams = self.__backend.GetGroupsToCreateMeeting(bs.EntityId(id=uid))
             for team in teams:
-                msg += f'/create_meeting{team.id} -- {team.name}\n'
-            return [
-                um.ServerResponse(user_id=uid, text=msg)
-            ]
+                response.append(um.ServerResponse(user_id=uid, text=f'/create_meeting{team.id} -- {team.name}\n'))
+            return response
         elif state is None:
             group_id = int(text[15:])
+
             meeting_id = self.__backend.CreateMeeting(bs.MeetingInfo(
                 id=-1,
                 creator=uid,
