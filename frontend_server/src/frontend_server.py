@@ -573,7 +573,7 @@ class AddToMeetingCmdHandler(RequestHandler):
                     response.append(um.ServerResponse(user_id=mu, text=f'{meeting_info.desc} {add_to_meeting_meeting_starts_at} {meeting_date}'))
             add_to_meeting_users_were_added = self.__lines.get_line('add_to_meeting_users_were_added', uid)
             response.append(um.ServerResponse(user_id=uid, text=f'{add_to_meeting_users_were_added}'))
-            response.append(get_help_message(uid))
+            response.append(get_help_message(uid, self.__lines))
             return response
 
 
@@ -619,7 +619,7 @@ class UpdateMeetingTimeCmdHandler(RequestHandler):
             meeting_date = datetime.fromtimestamp(meeting_info.time)
             update_meeting_time_time_updated = self.__lines.get_line('update_meeting_time_time_updated', uid)
             response.append(um.ServerResponse(user_id=uid, text=f'{meeting_info.desc} {update_meeting_time_time_updated} {meeting_date}'))
-            response.append(get_help_message(uid))
+            response.append(get_help_message(uid, self.__lines))
             return response
 
 
@@ -775,13 +775,11 @@ class ChangeLanguageCmdHandler(RequestHandler):
         state = self.__states.get_state(uid)
         if text == '/change_language':
             self.__states.set_state(uid, State('changing_language', -1))
-            msg = ''
+            response = []
             for language in self.__lines.get_all_languages():
                 language_name = self.__lines.get_line(language, uid)
-                msg += f'/change_language__{language} -- {language_name}\n'
-            return [
-                um.ServerResponse(user_id=uid, text=msg)
-            ]
+                response.append(um.ServerResponse(user_id=uid, text=f'/change_language__{language} -- {language_name}\n'))
+            return response
         elif state.action == 'changing_language':
             self.__states.clear_state(uid)
             language = str(text[18:])
@@ -790,7 +788,7 @@ class ChangeLanguageCmdHandler(RequestHandler):
             msg = f'{change_language_changed}'
             return [
                 um.ServerResponse(user_id=uid, text=msg),
-                get_help_message(uid)
+                get_help_message(uid, self.__lines)
             ]
 
 

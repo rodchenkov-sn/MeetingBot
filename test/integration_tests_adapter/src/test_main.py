@@ -17,11 +17,15 @@ DEFAULT_TAGGED_USER_ID_ACCEPT_INVITATION = 6
 DEFAULT_USER_ID_REJECT_INVITATION = 7
 DEFAULT_TAGGED_USER_ID_REJECT_INVITATION = 8
 DEFAULT_USER_ID_START = 9
+DEFAULT_USER_ID_CHANGE_LANGUAGE = 10
 # team name
 DEFAULT_TEAM_NAME_CREATE_TEAM = 'gay team'
 DEFAULT_TEAM_NAME_INVITE_USER = 'sad team'
 DEFAULT_TEAM_NAME_ACCEPT_INVITATION = 'wide team'
 DEFAULT_TEAM_NAME_REJECT_INVITATION = 'tight team'
+#language
+DEFAULT_LANGUAGE_NAME_EN = 'en'
+DEFAULT_LANGUAGE_NAME_RU = 'ru'
 # cmd
 CMD_HELP = '/help'
 CMD_CREATE_TEAM = '/create_team'
@@ -29,8 +33,9 @@ CMD_INVITE_MEMBER = "/invite_member"
 CMD_ACCEPT_INVITE = "/accept_invite"
 CMD_REJECT_INVITE = "/reject_invite"
 CMD_START = "/start"
+CMD_CHANGE_LANGUAGE = "/change_language"
 # line
-LINE_HELP = f"/create_team - to add team\n" \
+LINE_HELP_EN = f"/create_team - to add team\n" \
     f"/invite_member - to invite user\n" \
     f"/create_meeting - to create meeting\n" \
     f"/invite_to_meeting - to invite to meeting\n" \
@@ -44,6 +49,20 @@ LINE_HELP = f"/create_team - to add team\n" \
     f"/auth_gcal - to auth using google calendar\n" \
     f"/change_language - to change language\n" \
     f"\n/help - to see this message"
+LINE_HELP_RU = f"/create_team - чтобы добавить команду\n" \
+    f"/invite_member - чтобы пригласить пользователя\n" \
+    f"/create_meeting - чтобы создать встречу\n" \
+    f"/invite_to_meeting - чтобы пригласить на встречу\n" \
+    f"/add_child_team - чтобы добавить дочернюю команду\n" \
+    f"/edit_policy - чтобы редактировать политику команды\n" \
+    f"/add_to_meeting - чтобы добавить на встречу\n" \
+    f"/update_meeting_time - чтобы обновить время встречи\n" \
+    f"/get_agenda - чтобы получить расписание\n" \
+    f"/upload_file - чтобы загрузить файл\n" \
+    f"/get_files - чтобы получить доступные файлы\n" \
+    f"/auth_gcal - чтобы авторизоваться используя гугл календарь\n" \
+    f"/change_language - чтобы сменить язык\n" \
+    f"\n/help - чтобы увидеть это сообщение"
 LINE_CREATE_TEAM_ENTER_NAME = "Enter name:"
 LINE_CREATE_TEAM_TEAM_CREATED = "team created"
 LINE_INVITE_USER_INVITATIONS_WERE_SEND = "Invitations were send"
@@ -55,6 +74,12 @@ LINE_ACCEPT_INVITATION_ACCEPTED = "Accepted"
 LINE_REJECT_INVITATION_REJECTED = "Rejected"
 LINE_ACCEPT_INVITATION_ACCEPTED_INVITATION = "accepted your invitation"
 LINE_REJECT_INVITATION_REJECTED_INVITATION = "rejected your invitation"
+LINE_CHANGE_LANGUAGE_EN_NAME_EN = "English"
+LINE_CHANGE_LANGUAGE_EN_NAME_RU = "Английский"
+LINE_CHANGE_LANGUAGE_RU_NAME_EN = "Russian"
+LINE_CHANGE_LANGUAGE_RU_NAME_RU = "Русский"
+LINE_CHANGE_LANGUAGE_CHANGED_EN = "Language changed"
+LINE_CHANGE_LANGUAGE_CHANGED_RU = "Язык сменен"
 # pattern
 PATTERN_TEAM_OPTION_INVITE_USER = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_INVITE_USER}\n")
 PATTERN_TEAM_OPTION_ACCEPT_INVITATION = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ -- {DEFAULT_TEAM_NAME_ACCEPT_INVITATION}\n")
@@ -62,7 +87,8 @@ PATTERN_TEAM_OPTION_REJECT_INVITATION = re.compile(rf"{CMD_INVITE_MEMBER}[0-9]+ 
 
 
 def test_help(
-    _user_id=DEFAULT_USER_ID_HELP
+    _user_id=DEFAULT_USER_ID_HELP,
+    _line_help=LINE_HELP_EN
 ):
     # send help command
     msg = um.UserMessage(
@@ -73,7 +99,7 @@ def test_help(
     assert len(responses) == 1
     r = responses.pop()
     assert r.user_id == _user_id
-    assert r.text == LINE_HELP
+    assert r.text == _line_help
 
 
 def test_create_team(
@@ -99,7 +125,7 @@ def test_create_team(
     assert len(responses) == 2
     r1 = responses.pop()
     assert r1.user_id == _user_id
-    assert r1.text == LINE_HELP
+    assert r1.text == LINE_HELP_EN
     r2 = responses.pop()
     assert r2.user_id == _user_id
     assert r2.text == f"{_team_name} {LINE_CREATE_TEAM_TEAM_CREATED}!"
@@ -148,7 +174,7 @@ def test_invite_user(
     assert len(responses) == 3
     r1 = responses.pop()
     assert r1.user_id == _user_id
-    assert r1.text == LINE_HELP
+    assert r1.text == LINE_HELP_EN
     r2 = responses.pop()
     assert r2.user_id == _user_id
     assert r2.text == LINE_INVITE_USER_INVITATIONS_WERE_SEND
@@ -215,7 +241,8 @@ def test_reject_invitation(
 
 
 def test_start(
-    _user_id=DEFAULT_USER_ID_START
+    _user_id=DEFAULT_USER_ID_START,
+    _line_help=LINE_HELP_EN
 ):
     # send start command
     msg = um.UserMessage(
@@ -226,4 +253,48 @@ def test_start(
     assert len(responses) == 1
     r = responses.pop()
     assert r.user_id == _user_id
-    assert r.text == LINE_HELP
+    assert r.text == _line_help
+
+
+def test_change_language(
+    _user_id=DEFAULT_USER_ID_CHANGE_LANGUAGE,
+    _lang_name_before=DEFAULT_LANGUAGE_NAME_EN,
+    _lang_name_after=DEFAULT_LANGUAGE_NAME_RU,
+    _lang_line_before=LINE_CHANGE_LANGUAGE_EN_NAME_EN,
+    _lang_line_after=LINE_CHANGE_LANGUAGE_RU_NAME_EN,
+    _line_help_before=LINE_HELP_EN,
+    _line_help_after=LINE_HELP_RU,
+    _line_change_lang_changed=LINE_CHANGE_LANGUAGE_CHANGED_RU,
+):
+    # test help command
+    test_help(_user_id=_user_id, _line_help=_line_help_before)
+    # send change language command
+    msg = um.UserMessage(
+        user_id=_user_id,
+        text=CMD_CHANGE_LANGUAGE
+    )
+    rmsg = [
+        f"{CMD_CHANGE_LANGUAGE}__{_lang_name_before} -- {_lang_line_before}\n",
+        f"{CMD_CHANGE_LANGUAGE}__{_lang_name_after} -- {_lang_line_after}\n"
+    ]
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 2
+    r1 = responses.pop()
+    assert r1.user_id == _user_id
+    assert r1.text in rmsg
+    r2 = responses.pop()
+    assert r2.user_id == _user_id
+    assert r2.text in rmsg
+    # send language option
+    msg = um.UserMessage(
+        user_id=_user_id,
+        text=f"{CMD_CHANGE_LANGUAGE}__{_lang_name_after}"
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 2
+    r1 = responses.pop()
+    assert r1.user_id == _user_id
+    assert r1.text == _line_help_after
+    r2 = responses.pop()
+    assert r2.user_id == _user_id
+    assert r2.text == _line_change_lang_changed
