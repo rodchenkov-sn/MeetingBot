@@ -853,7 +853,7 @@ class UserMessageHandler(umg.UserMessageHandlerServicer):
         if responses is None:
             responses = self.__states_handlers.try_handle(request, self.__state_repo.get_state(request.user_id))
         if responses is None:
-            responses = [get_help_message(request.user_id)]
+            responses = [get_help_message(request.user_id, self.__lines_repo)]
         for response in responses:
             yield response
 

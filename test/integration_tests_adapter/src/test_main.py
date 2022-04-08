@@ -1,5 +1,7 @@
 import grpc
 import re
+import string
+import random
 
 from datetime import datetime, timedelta
 
@@ -142,6 +144,10 @@ PATTERN_TEAM_OPTION_CREATE_MEETING_REJECT_MEETING_INVITATION = re.compile(rf"{CM
 PATTERN_MEETING_OPTION_INVITE_TO_MEETING_INVITE_TO_MEETING = re.compile(rf"{CMD_INVITE_TO_MEETING}[0-9]+ -- {DEFAULT_MEETING_DESC_INVITE_TO_MEETING}\n")
 PATTERN_MEETING_OPTION_INVITE_TO_MEETING_ACCEPT_MEETING_INVITATION = re.compile(rf"{CMD_INVITE_TO_MEETING}[0-9]+ -- {DEFAULT_MEETING_DESC_ACCEPT_MEETING_INVITATION}\n")
 PATTERN_MEETING_OPTION_INVITE_TO_MEETING_REJECT_MEETING_INVITATION = re.compile(rf"{CMD_INVITE_TO_MEETING}[0-9]+ -- {DEFAULT_MEETING_DESC_REJECT_MEETING_INVITATION}\n")
+
+
+def get_rand_input(size: int) -> str:
+    return ''.join(random.choice(string.ascii_letters + string.digits + string.punctuation) for _ in range(size))
 
 
 def test_help(
@@ -618,3 +624,19 @@ def test_reject_invite_to_meeting(
     r2 = responses.pop()
     assert r2.user_id == _invited_user_id
     assert r2.text == LINE_REJECT_MEETING_INVITATION_YOU_REJECTED
+
+
+def test_fuzzing(
+    _user_id=DEFAULT_USER_ID_HELP,
+    _line_help=LINE_HELP_EN
+):
+    for _ in range(1000):
+        msg = um.UserMessage(
+            user_id = _user_id,
+            text=get_rand_input(20)
+        )
+        responses = list(stub.HandleMessage(msg))
+        assert len(responses) == 1
+        assert responses[0].user_id == _user_id
+        assert responses[0].text == _line_help
+
