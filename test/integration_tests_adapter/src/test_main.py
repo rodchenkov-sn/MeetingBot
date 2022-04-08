@@ -16,6 +16,7 @@ DEFAULT_USER_ID_ACCEPT_INVITATION = 5
 DEFAULT_TAGGED_USER_ID_ACCEPT_INVITATION = 6
 DEFAULT_USER_ID_REJECT_INVITATION = 7
 DEFAULT_TAGGED_USER_ID_REJECT_INVITATION = 8
+DEFAULT_USER_ID_START = 9
 # team name
 DEFAULT_TEAM_NAME_CREATE_TEAM = 'gay team'
 DEFAULT_TEAM_NAME_INVITE_USER = 'sad team'
@@ -27,6 +28,7 @@ CMD_CREATE_TEAM = '/create_team'
 CMD_INVITE_MEMBER = "/invite_member"
 CMD_ACCEPT_INVITE = "/accept_invite"
 CMD_REJECT_INVITE = "/reject_invite"
+CMD_START = "/start"
 # line
 LINE_HELP = f"/create_team - to add team\n" \
     f"/invite_member - to invite user\n" \
@@ -210,3 +212,18 @@ def test_reject_invitation(
     r2 = responses.pop()
     assert r2.user_id == _tagged_user_id
     assert r2.text == f"{LINE_REJECT_INVITATION_REJECTED}!"
+
+
+def test_start(
+    _user_id=DEFAULT_USER_ID_START
+):
+    # send start command
+    msg = um.UserMessage(
+        user_id=_user_id,
+        text=CMD_START
+    )
+    responses = list(stub.HandleMessage(msg))
+    assert len(responses) == 1
+    r = responses.pop()
+    assert r.user_id == _user_id
+    assert r.text == LINE_HELP
