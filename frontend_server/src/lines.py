@@ -103,6 +103,9 @@ class LinesRepo:
             "edit_policy_propagate_policy": {"en": "propagate policy", "ru": "политика применяется"},
             "edit_policy_parent_visible": {"en": "parent visible", "ru": "родитель видим"},
             "edit_policy_propagate_admin": {"en": "propagate admin", "ru": "админство применяется"},
+            "en": {"en": "English", "ru": "Английский"},
+            "ru": {"en": "Russian", "ru": "Русский"},
+            "change_language_changed": {"en": "Language changed", "ru": "Язык сменен"},
         }
 
     def get_user_language(self, _user_id: int) -> str:
