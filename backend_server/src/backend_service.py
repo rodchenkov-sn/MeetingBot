@@ -35,6 +35,8 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
 
     def GetTeamInfo(self, request, context):
         team = self.__teams_repo.get_team(request.id)
+        if team is None:
+            bs.NamedInfo(id=-1, name='')
         return bs.NamedInfo(id=team.id, name=team.name)
 
     def AddTeamMember(self, request, context):
@@ -48,6 +50,8 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
     def UpdateMeetingInfo(self, request, context):
         self.__meetings_repo.update_meeting(meeting_from_msg(request))
         m = self.__meetings_repo.get_meeting(request.id)
+        if m is None:
+            return bs.SimpleResponse(ok=False)
         if m.time > 0 and m.desc != '':
             for uid in set(m.participants):
                 self.__calendar_service.PushEvent(cs.CalendarEvent(
@@ -66,6 +70,8 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
     def AddParticipant(self, request, context):
         self.__meetings_repo.add_participant(request.object, request.subject)
         m = self.__meetings_repo.get_meeting(request.object)
+        if m is None:
+            return bs.SimpleResponse(ok=False)
         for uid in set(m.participants):
             self.__calendar_service.PushEvent(cs.CalendarEvent(
                 user_id=uid,
@@ -76,11 +82,16 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
         return bs.SimpleResponse(ok=True)
 
     def GetMeetingInfo(self, request, context):
-        return self.__meetings_repo.get_meeting(request.id).to_proto()
+        m = self.__meetings_repo.get_meeting(request.id)
+        if m is None:
+            return Meeting(-1, -1).to_proto()
+        return m.to_proto()
 
     def GetTeamMembers(self, request, context):
-        for member in self.__teams_repo.get_team(request.id).members:
-            yield bs.EntityId(id=member)
+        team = self.__teams_repo.get_team(request.id)
+        if team is not None:
+            for member in team.members:
+                yield bs.EntityId(id=member)
 
     def ApproveMeeting(self, request, context):
         self.__meetings_repo.approve_meeting(request.id)
@@ -102,9 +113,15 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
         return bs.EntityId(id=self.__teams_repo.get_team(request.id).owner)
 
     def GetGroupPolicy(self, request, context):
-        policy = self.__teams_repo.get_team(request.id).policy
+        t = self.__teams_repo.get_team(request.id)
+        if t is None:
+            policy = TeamPolicy()
+            gi = -1
+        else:
+            policy = t.policy
+            gi = request.id
         return bs.TeamPolicy(
-            groupId=request.id, 
+            groupId=gi, 
             allowUsersToCreateMeetings=policy.allow_users_to_create_meetings, 
             needApproveForMeetingCreation=policy.need_approve_for_meeting_creation,
             propagatePolicy=policy.propagate_policy,
@@ -141,8 +158,9 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
     def GetMeetingMembers(self, request, context):
         mid = request.id
         meeting = self.__meetings_repo.get_meeting(mid)
-        for uid in set(meeting.participants):
-            yield bs.EntityId(id=uid)
+        if meeting is not None:
+            for uid in set(meeting.participants):
+                yield bs.EntityId(id=uid)
 
     def AddFileToTeam(self, request, context):
         print(request)
@@ -162,16 +180,19 @@ def serve():
     random.seed()
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 
-    if os.environ.get("BackendTestEnv") is None:
+    if os.environ.get("BackendTestEnv") is not None:
+        from test_mock_collection import MockCollection
+        teams_repo = TeamsRepo(MockCollection())
+        meetings_repo = MeetingsRepo(MockCollection())
+    elif os.environ.get("BackendSysTestEnv") is not None:
+        teams_repo = TeamsRepo(MongoCollection('mongodb://admin:password@database:27017/MeetingBotDB', 'MeetingBotDB', 'Teams'))
+        meetings_repo = MeetingsRepo(MongoCollection('mongodb://admin:password@database:27017/MeetingBotDB', 'MeetingBotDB', 'Meetings'))
+    else:
         with open('config.yml', 'r') as config_file:
             config = yaml.safe_load(config_file)
 
         teams_repo = TeamsRepo(MongoCollection(config['teams_repo_url'], 'MeetingBotDB', 'Teams'))
         meetings_repo = MeetingsRepo(MongoCollection(config['meetings_repo_url'], 'MeetingBotDB', 'Meetings'))
-    else:
-        from test_mock_collection import MockCollection
-        teams_repo = TeamsRepo(MockCollection())
-        meetings_repo = MeetingsRepo(MockCollection())
 
     channel_calendar = grpc.insecure_channel('calendar-service:50053')
     calendar_stub = css.CalendarServiceStub(channel_calendar)

@@ -1,6 +1,6 @@
 import yaml
 
-from typing import Iterable
+from typing import Iterable, Optional
 
 import backend_service_pb2 as bs
 
@@ -96,8 +96,11 @@ class MeetingsRepo:
     def add_participant(self, meeting_id: int, user_id: int):
         self.__collection.push_to_one(meeting_id, 'participants', user_id)
 
-    def get_meeting(self, meeting_id: int) -> Meeting:
-        return meeting_from_mongo(self.__collection.find_one({'_id': meeting_id}))
+    def get_meeting(self, meeting_id: int) -> Optional[Meeting]:
+        m = self.__collection.find_one({'_id': meeting_id})
+        if m is None:
+            return None
+        return meeting_from_mongo(m)
 
     def approve_meeting(self, meeting_id: int):
         self.__collection.set_one(meeting_id, 'approved', True)

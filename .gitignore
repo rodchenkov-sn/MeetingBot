@@ -4,3 +4,4 @@ config.yml
 credentials.json
 .coverage
 .idea
+*.log
