@@ -9,8 +9,6 @@ services:
     command: redis-server
     networks:
       - internal-net
-    logging:
-      driver: none
 
   database:
     image: mongo:latest
@@ -24,8 +22,6 @@ services:
       - ./systest-init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
     ports:
       - '27017-27019:27017-27019'
-    logging:
-      driver: none
 
   calendar-service:
     networks:
@@ -75,8 +71,6 @@ services:
     volumes:
       - ./systest-nginx.conf:/etc/nginx/nginx.conf:ro
       - .:/var/log/nginx
-    logging:
-      driver: none
 
   frontend-service:
     networks:
@@ -110,8 +104,6 @@ services:
       - redis-service
     networks:
       - internal-net
-    logging:
-      driver: none
 
   tg-test-service:
     container_name: tg-test-service
