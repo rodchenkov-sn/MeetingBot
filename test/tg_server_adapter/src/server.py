@@ -35,6 +35,10 @@ class ServerThread(threading.Thread):
 def start_server():
     global server
     app = flask.Flask('myapp')
+
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
     
     @app.get(f'/bot:{TOKEN}/getUpdates')
     def get_updates():
@@ -42,6 +46,7 @@ def start_server():
             message = messages_queue.get(timeout=0.1)
         except:
             return flask.jsonify({'ok': True, 'result': []}), 200
+        messages_queue.task_done()
         return flask.jsonify({
             'ok': True,
             'result': [

@@ -4,7 +4,7 @@ with open('nginx_access.log', 'r') as f:
     c = Counter(f.read().splitlines())
     if len(c) != 2:
         print('num of redirection targets unexpected:')
-        print(list(c.elements()))
+        print(set(c.elements()))
         exit(1)
     num_redirrections = []
     for redirrection in c:
