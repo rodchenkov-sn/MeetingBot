@@ -1,10 +1,14 @@
 @echo off
-python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../tg_api_adapter/src --grpc_python_out=%~dp0../tg_api_adapter/src %~dp0src\user_message.proto
-python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../frontend_server/src --grpc_python_out=%~dp0../frontend_server/src  %~dp0src/user_message.proto
-python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../backend_server/src --grpc_python_out=%~dp0../backend_server/src %~dp0src\backend_service.proto
-python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../frontend_server/src --grpc_python_out=%~dp0../frontend_server/src %~dp0src\backend_service.proto
-python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../frontend_server/src --grpc_python_out=%~dp0../frontend_server/src %~dp0src\calendar_service.proto
-python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../calendar_service/src --grpc_python_out=%~dp0../calendar_service/src %~dp0src\calendar_service.proto
-python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../backend_server/src --grpc_python_out=%~dp0../backend_server/src %~dp0src\calendar_service.proto
-python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../frontend_server/src --grpc_python_out=%~dp0../frontend_server/src %~dp0src\file_repo_service.proto
+python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../tg_api_adapter/src   --grpc_python_out=%~dp0../tg_api_adapter/src   %~dp0src/user_message.proto
+python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../frontend_server/src  --grpc_python_out=%~dp0../frontend_server/src  %~dp0src/user_message.proto
+python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../backend_server/src   --grpc_python_out=%~dp0../backend_server/src   %~dp0src/backend_service.proto
+python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../frontend_server/src  --grpc_python_out=%~dp0../frontend_server/src  %~dp0src/backend_service.proto
+python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../frontend_server/src  --grpc_python_out=%~dp0../frontend_server/src  %~dp0src/calendar_service.proto
+python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../calendar_service/src --grpc_python_out=%~dp0../calendar_service/src %~dp0src/calendar_service.proto
+python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../backend_server/src   --grpc_python_out=%~dp0../backend_server/src   %~dp0src/calendar_service.proto
+python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../frontend_server/src  --grpc_python_out=%~dp0../frontend_server/src  %~dp0src/file_repo_service.proto
+
+python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../test/integration_tests_adapter/src --grpc_python_out=%~dp0../test/integration_tests_adapter/src %~dp0src/user_message.proto
+python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../test/mock_calendar_service/src     --grpc_python_out=%~dp0../test/mock_calendar_service/src     %~dp0src/calendar_service.proto
+python -m grpc_tools.protoc -I%~dp0src --python_out=%~dp0../test/mock_file_service/src         --grpc_python_out=%~dp0../test/mock_file_service/src         %~dp0src/file_repo_service.proto
 echo Done.
