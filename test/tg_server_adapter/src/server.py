@@ -81,6 +81,8 @@ class Client:
     def __init__(self, username: str, id: int):
         self.__username = username
         self.__id = id
+        self.send_message("/start")
+        responses_queue.get(timeout=10)
 
     def send_message(self, message: str):
         messages_queue.put({
