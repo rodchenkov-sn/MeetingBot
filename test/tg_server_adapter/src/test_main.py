@@ -33,6 +33,22 @@ LINE_HELP_RU = f"/create_team - чтобы добавить команду\n" \
     f"/change_language - чтобы сменить язык\n" \
     f"\n/help - чтобы увидеть это сообщение"
 
+USER_ID_1 = 1
+USER_ID_2 = 2
+USER_ID_3 = 3
+USER_ID_4 = 4
+USER_ID_5 = 5
+USER_ID_6 = 6
+USER_ID_7 = 7
+
+USERNAME_1 = "Ayanami"
+USERNAME_2 = "Rudy"
+USERNAME_3 = "Asuna"
+USERNAME_4 = "Sakura"
+USERNAME_5 = "Rosy"
+USERNAME_6 = "Cinderella"
+USERNAME_7 = "Katya"
+
 
 @pytest.fixture(scope='session', autouse=True)
 def serv_starter():
@@ -42,8 +58,8 @@ def serv_starter():
 
 
 def test_help_cmd(serv_starter):
-    user_id = 1
-    client = Client('Ayanami', user_id)
+    user_id = USER_ID_1
+    client = Client(USERNAME_1, user_id)
 
     client.send_message('/help')
     resp = responses_queue.get(timeout=10)
@@ -52,8 +68,8 @@ def test_help_cmd(serv_starter):
 
 
 def test_start_cmd(serv_starter):
-    user_id = 2
-    client = Client('Rudy', user_id)
+    user_id = USER_ID_2
+    client = Client(USERNAME_2, user_id)
 
     client.send_message('/start')
     resp = responses_queue.get(timeout=10)
@@ -62,8 +78,8 @@ def test_start_cmd(serv_starter):
 
 
 def test_choose_language_cmd(serv_starter):
-    user_id = 3
-    client = Client('Asuna', user_id)
+    user_id = USER_ID_3
+    client = Client(USERNAME_3, user_id)
 
     client.send_message('/help')
     resp = responses_queue.get(timeout=10)
@@ -108,9 +124,63 @@ def create_team(
 
 def test_create_team(serv_starter):
     create_team(
-        username="Sakura",
-        user_id=4,
+        username=USERNAME_4,
+        user_id=USER_ID_4,
         team_name="konoha"
+    )
+
+
+def invite_to_team(
+    username,
+    user_id,
+    team_name,
+    invited_username,
+    invited_user_id
+):
+    pattern_team_id = re.compile(rf"/invite_member[0-9]+ -- {team_name}\n")
+
+    create_team(
+        username,
+        user_id,
+        team_name
+    )
+
+    client = Client(username, user_id)
+    Client(invited_username, invited_user_id)
+
+    client.send_message("/invite_member")
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == user_id
+    assert pattern_team_id.match(resp.text)
+
+    team_id = resp.text
+    team_id = re.sub("/invite_member", "", team_id)
+    team_id = re.sub(f" -- {team_name}\n", "", team_id)
+
+    client.send_message(f"/invite_member{team_id}")
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == user_id
+    assert resp.text == "Tag one or multiple users"
+
+    client.send_message(f"@{invited_username}")
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == invited_user_id
+    assert resp.text == f'You were invited to team {team_name} by @{username}\n\n/accept_invite{team_id} -- accept\n/reject_invite{team_id} -- reject'
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == user_id
+    assert resp.text == "Invitations were send"
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == user_id
+    assert resp.text == LINE_HELP_EN
+
+
+def test_invite_to_team(serv_starter):
+    invite_to_team(
+        username=USERNAME_6,
+        user_id=USER_ID_6,
+        team_name="river",
+        invited_username=USERNAME_7,
+        invited_user_id=USER_ID_7
     )
 
 
@@ -158,8 +228,8 @@ def create_meeting(
 
 def test_create_meeting(serv_starter):
     create_meeting(
-        username="Rosy",
-        user_id=5,
+        username=USERNAME_5,
+        user_id=USER_ID_5,
         team_name="garden",
         meeting_desc="breakfast",
         meeting_time_str="11-11-2022 11:11"
