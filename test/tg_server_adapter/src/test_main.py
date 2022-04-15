@@ -40,6 +40,8 @@ USER_ID_4 = 4
 USER_ID_5 = 5
 USER_ID_6 = 6
 USER_ID_7 = 7
+USER_ID_8 = 8
+USER_ID_9 = 9
 
 USERNAME_1 = "Ayanami"
 USERNAME_2 = "Rudy"
@@ -48,6 +50,8 @@ USERNAME_4 = "Sakura"
 USERNAME_5 = "Rosy"
 USERNAME_6 = "Cinderella"
 USERNAME_7 = "Katya"
+USERNAME_8 = "Nastya"
+USERNAME_9 = "Miya"
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -136,7 +140,7 @@ def invite_to_team(
     team_name,
     invited_username,
     invited_user_id
-):
+) -> str:
     pattern_team_id = re.compile(rf"/invite_member[0-9]+ -- {team_name}\n")
 
     create_team(
@@ -173,6 +177,8 @@ def invite_to_team(
     assert resp.user_id == user_id
     assert resp.text == LINE_HELP_EN
 
+    return team_id
+
 
 def test_invite_to_team(serv_starter):
     invite_to_team(
@@ -181,6 +187,42 @@ def test_invite_to_team(serv_starter):
         team_name="river",
         invited_username=USERNAME_7,
         invited_user_id=USER_ID_7
+    )
+
+
+def accept_team_invite(
+    username,
+    user_id,
+    team_name,
+    invited_username,
+    invited_user_id
+):
+    team_id = invite_to_team(
+        username,
+        user_id,
+        team_name,
+        invited_username,
+        invited_user_id
+    )
+
+    invited_client = Client(invited_username, invited_user_id)
+
+    invited_client.send_message(f"/accept_invite{team_id}")
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == "Accepted!"
+    assert resp.text == invited_user_id
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == user_id
+    assert resp.text == f"@{invited_username} accepted your invitation"
+
+
+def test_accept_team_invite(serv_starter):
+    accept_team_invite(
+        username=USERNAME_8,
+        user_id=USER_ID_8,
+        team_name="koshka",
+        invited_username=USERNAME_9,
+        invited_user_id=USER_ID_9
     )
 
 
