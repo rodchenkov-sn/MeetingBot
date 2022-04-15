@@ -85,9 +85,10 @@ def test_choose_language_cmd(serv_starter):
     assert resp.text == LINE_HELP_RU
 
 
-def test_create_team(serv_starter):
-    user_id = 6969
-    team_name = "konoha"
+def create_team(
+    user_id,
+    team_name
+):
     client = Client('Sakura', user_id)
 
     client.send_message('/create_team')
@@ -104,26 +105,24 @@ def test_create_team(serv_starter):
     assert resp.text == LINE_HELP_EN
 
 
-def test_create_meeting(serv_starter):
-    user_id = 7777
-    team_name = "garden"
+def test_create_team(serv_starter):
+    create_team(
+        user_id=6969,
+        team_name="konoha"
+    )
+
+
+def create_meeting(
+    user_id,
+    team_name,
+    meeting_desc,
+    meeting_time_str
+):
     pattern_team_id = re.compile(rf"/create_meeting[0-9]+ -- {team_name}\n")
-    meeting_desc = "breakfast"
-    meeting_time_str = "11-11-2022 11:11"
+
+    create_team(user_id, team_name)
+
     client = Client('Rosy', user_id)
-
-    client.send_message('/create_team')
-    resp = responses_queue.get(timeout=10)
-    assert resp.user_id == user_id
-    assert resp.text == "Enter name:"
-
-    client.send_message(team_name)
-    resp = responses_queue.get(timeout=10)
-    assert resp.user_id == user_id
-    assert resp.text == f"{team_name} team created!"
-    resp = responses_queue.get(timeout=10)
-    assert resp.user_id == user_id
-    assert resp.text == LINE_HELP_EN
 
     client.send_message('/create_meeting')
     resp = responses_queue.get(timeout=10)
@@ -148,3 +147,12 @@ def test_create_meeting(serv_starter):
     resp = responses_queue.get(timeout=10)
     assert resp.user_id == user_id
     assert resp.text == "Meeting created!"
+
+
+def test_create_meeting(serv_starter):
+    create_meeting(
+        user_id=7777,
+        team_name="garden",
+        meeting_desc="breakfast",
+        meeting_time_str="11-11-2022 11:11"
+    )
