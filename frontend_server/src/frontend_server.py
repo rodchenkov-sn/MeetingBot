@@ -187,7 +187,6 @@ class CreateMeetingCmdHandler(RequestHandler):
             return response
         elif state is None:
             group_id = int(text[15:])
-
             meeting_id = self.__backend.CreateMeeting(bs.MeetingInfo(
                 id=-1,
                 creator=uid,

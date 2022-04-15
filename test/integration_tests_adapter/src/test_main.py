@@ -639,4 +639,3 @@ def test_fuzzing(
         assert len(responses) == 1
         assert responses[0].user_id == _user_id
         assert responses[0].text == _line_help
-

@@ -37,6 +37,7 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
         team = self.__teams_repo.get_team(request.id)
         if team is None:
             bs.NamedInfo(id=-1, name='')
+
         return bs.NamedInfo(id=team.id, name=team.name)
 
     def AddTeamMember(self, request, context):
@@ -120,6 +121,7 @@ class BackendServiceHandler(bsg.BackendServiceServicer):
         else:
             policy = t.policy
             gi = request.id
+        policy = self.__teams_repo.get_team(request.id).policy
         return bs.TeamPolicy(
             groupId=gi, 
             allowUsersToCreateMeetings=policy.allow_users_to_create_meetings, 
