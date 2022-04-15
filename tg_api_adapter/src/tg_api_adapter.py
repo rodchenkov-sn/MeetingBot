@@ -4,6 +4,7 @@ import telebot
 import yaml
 import redis
 import re
+import os
 
 from datetime import datetime
 from apscheduler.jobstores.redis import RedisJobStore
@@ -14,11 +15,19 @@ import user_message_pb2_grpc as ums
 import user_message_pb2 as um
 
 
-with open('config.yml', 'r') as config_file:
-    config = yaml.safe_load(config_file)
+if os.environ['AdapterSysTestEnv'] is None:
+    with open('config.yml', 'r') as config_file:
+        config = yaml.safe_load(config_file)
+    token = config['tg_token']
+else:
+    from telebot import apihelper
+    apihelper.API_URL = 'http://tg-test-service:9000/bot:{0}/{1}'
+    token = 'token'
 
 
-bot = telebot.TeleBot(config['tg_token'])
+bot = telebot.TeleBot(token)
+
+
 channel = grpc.insecure_channel('frontend-service:50051')
 stub = ums.UserMessageHandlerStub(channel)
 
@@ -99,4 +108,5 @@ def get_text_messages(message):
 
 
 def run():
-    bot.polling(none_stop=True, interval=0)
+    bot.infinity_polling()
+

@@ -1,6 +1,6 @@
 import yaml
 
-from typing import Iterable
+from typing import Iterable, Optional
 
 from team_policy import TeamPolicy
 
@@ -90,13 +90,18 @@ class TeamsRepo:
                 for child in curr.children:
                     to_visit.append(self.get_team(child))
 
-    def get_team(self, _id: int) -> Team:
-        return team_from_mongo(self.__collection.find_one({'_id': _id}))
+    def get_team(self, _id: int) -> Optional[Team]:
+        t = self.__collection.find_one({'_id': _id})
+        if t is None:
+            return None
+        return team_from_mongo(t)
 
     def add_member_to_team(self, _team_id: int, _member_id: int):
         self.__collection.push_to_one(_team_id, 'members', _member_id)
 
     def set_team_policy(self, _id: int, policy: TeamPolicy):
+        if self.get_team(_id) is None:
+            return
         self.__collection.set_one(_id, 'need_approve_for_meeting_creation', policy.need_approve_for_meeting_creation)
         self.__collection.set_one(_id, 'allow_users_to_create_meetings', policy.allow_users_to_create_meetings)
         self.__collection.set_one(_id, 'propagate_policy', policy.propagate_policy)
@@ -112,6 +117,8 @@ class TeamsRepo:
             yield team_from_mongo(item)
 
     def add_parent(self, _group_id: int, _parent_id: int):
+        if self.get_team(_group_id) is None or self.get_team(_parent_id) is None:
+            return
         self.__collection.set_one( _group_id, 'parent', _parent_id)
         self.__collection.push_to_one(_parent_id, 'children', _group_id)
         parent_team = self.get_team(_parent_id)
@@ -123,6 +130,8 @@ class TeamsRepo:
 
     def get_invitable_members(self, _group_id: int) -> Iterable[int]:
         curr_team = self.get_team(_group_id)
+        if curr_team is None:
+            return
         while curr_team.parent != -1 and self.get_team(curr_team.parent).policy.parent_visible:
             curr_team = self.get_team(curr_team.parent)
         visible_members = set()
@@ -140,6 +149,8 @@ class TeamsRepo:
             yield member
 
     def get_admins(self, _group_id: int) -> Iterable[int]:
+        if self.get_team(_group_id) is None:
+            return
         curr_team_id = _group_id
         while curr_team_id != -1:
             curr_team = self.get_team(curr_team_id)
@@ -154,6 +165,8 @@ class TeamsRepo:
 
     def get_available_files(self, _team_id: int) -> Iterable[int]:
         curr_team = self.get_team(_team_id)
+        if curr_team is None:
+            return
         while curr_team.parent != -1 and self.get_team(curr_team.parent).policy.parent_visible:
             curr_team = self.get_team(curr_team.parent)
         visible_files = set()

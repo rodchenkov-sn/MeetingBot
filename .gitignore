@@ -3,3 +3,5 @@ config.yml
 *_pb2*.py
 credentials.json
 .coverage
+.idea
+*.log

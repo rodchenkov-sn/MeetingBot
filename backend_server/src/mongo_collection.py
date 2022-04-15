@@ -21,7 +21,7 @@ class MongoCollection(ICollection):
         self.__collection.update_one({'_id': id}, {'$push': {field: value}})
 
     def find_one(self, filter: dict) -> dict:
-        self.__collection.find_one(filter)
+        return self.__collection.find_one(filter)
 
     def find_many(self, filter: dict) -> Iterable[dict]:
         for item in self.__collection.find(filter):
