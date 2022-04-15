@@ -16,10 +16,18 @@ jobs:
     steps:
       - name: Show test results
         run: docker compose -f systest-docker-compose.yml logs -f tg-test-service
-      - name: Propagate test result
+      - name: Propagate test results
         run: docker wait tg-test-service
       - name: Check load balancing
         run: python test/analizers/analize_nginx_balancing.py
+      - name: Shutdown one backend service
+        run: docker compose -f systest-docker-compose.yml stop backend-service-2
+      - name: Restart testing service
+        run: docker compose -f systest-docker-compose.yml restart tg-test-service
+      - name: Show test results
+        run: docker compose -f systest-docker-compose.yml logs -f tg-test-service
+      - name: Propagate test results
+        run: docker wait tg-test-service
   
   cleanup:
     runs-on: self-hosted

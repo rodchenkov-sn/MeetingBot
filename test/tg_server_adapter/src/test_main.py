@@ -36,33 +36,13 @@ LINE_HELP_RU = f"/create_team - чтобы добавить команду\n" \
     f"/change_language - чтобы сменить язык\n" \
     f"\n/help - чтобы увидеть это сообщение"
 
-USER_ID_1 = 1
-USER_ID_2 = 2
-USER_ID_3 = 3
-USER_ID_4 = 4
-USER_ID_5 = 5
-USER_ID_6 = 6
-USER_ID_7 = 7
-USER_ID_8 = 8
-USER_ID_9 = 9
-USER_ID_10 = 10
-USER_ID_11 = 11
 
-USERNAME_1 = "Ayanami"
-USERNAME_2 = "Rudy"
-USERNAME_3 = "Asuna"
-USERNAME_4 = "Sakura"
-USERNAME_5 = "Rosy"
-USERNAME_6 = "Cinderella"
-USERNAME_7 = "Katya"
-USERNAME_8 = "Nastya"
-USERNAME_9 = "Miya"
-USERNAME_10 = "Koya"
-USERNAME_11 = "Annie"
+def random_str(n):
+    return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(n))
 
 
 def stress():
-    client = Client('bruh', 100)
+    client = Client(random_str(8), random.randint(1, 99999))
     for _ in range(1000):
         client.send_message('/get_agenda_today')
     messages_queue.join()
@@ -77,8 +57,9 @@ def serv_starter():
 
 
 def test_help_cmd(serv_starter):
-    user_id = USER_ID_1
-    client = Client(USERNAME_1, user_id)
+    user_id = random.randint(1, 99999)
+    username = random_str(8)
+    client = Client(username, user_id)
 
     client.send_message('/help')
     resp = responses_queue.get(timeout=10)
@@ -87,8 +68,9 @@ def test_help_cmd(serv_starter):
 
 
 def test_start_cmd(serv_starter):
-    user_id = USER_ID_2
-    client = Client(USERNAME_2, user_id)
+    user_id = random.randint(1, 99999)
+    username = random_str(8)
+    client = Client(username, user_id)
 
     client.send_message('/start')
     resp = responses_queue.get(timeout=10)
@@ -97,8 +79,9 @@ def test_start_cmd(serv_starter):
 
 
 def test_choose_language_cmd(serv_starter):
-    user_id = USER_ID_3
-    client = Client(USERNAME_3, user_id)
+    user_id = random.randint(1, 99999)
+    username = random_str(8)
+    client = Client(username, user_id)
 
     client.send_message('/help')
     resp = responses_queue.get(timeout=10)
@@ -141,12 +124,10 @@ def create_team(
     assert resp.text == LINE_HELP_EN
 
 
-def random_str(n):
-    return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(n))
-
-
 def test_stability_create(serv_starter):
-    client = Client('bbb', 1703)
+    user_id = random.randint(1, 99999)
+    username = random_str(8)
+    client = Client(username, user_id)
 
     for x in range(1, 100):
         client.send_message('/create_team')
@@ -159,7 +140,9 @@ def test_stability_create(serv_starter):
 
 
 def test_escaped_name(serv_starter):
-    client = Client('bbb', 1703)
+    user_id = random.randint(1, 99999)
+    username = random_str(8)
+    client = Client(username, user_id)
     client.send_message('/create_team')
     responses_queue.get(timeout=10)
     team_name = "\n"
@@ -170,7 +153,9 @@ def test_escaped_name(serv_starter):
 
 
 def test_auth_gcal(serv_starter):
-    client = Client('e', 1212)
+    user_id = random.randint(1, 99999)
+    username = random_str(8)
+    client = Client(username, user_id)
     client.send_message('/auth_gcal')
     responses_queue.get(timeout=10)
     client.send_message('123')
@@ -180,9 +165,9 @@ def test_auth_gcal(serv_starter):
     
 def test_create_team(serv_starter):
     create_team(
-        username=USERNAME_4,
-        user_id=USER_ID_4,
-        team_name="konoha"
+        username=random_str(8),
+        user_id=random.randint(1, 99999),
+        team_name=random_str(8)
     )
 
 
@@ -335,8 +320,9 @@ def serv_starter():
 
 
 def test_help_cmd(serv_starter):
-    user_id = USER_ID_1
-    client = Client(USERNAME_1, user_id)
+    user_id = random.randint(1, 99999)
+    username = random_str(8)
+    client = Client(username, user_id)
 
     client.send_message('/help')
     resp = responses_queue.get(timeout=10)
@@ -345,8 +331,9 @@ def test_help_cmd(serv_starter):
 
 
 def test_start_cmd(serv_starter):
-    user_id = USER_ID_2
-    client = Client(USERNAME_2, user_id)
+    user_id = random.randint(1, 99999)
+    username = random_str(8)
+    client = Client(username, user_id)
 
     client.send_message('/start')
     resp = responses_queue.get(timeout=10)
@@ -355,8 +342,9 @@ def test_start_cmd(serv_starter):
 
 
 def test_choose_language_cmd(serv_starter):
-    user_id = USER_ID_3
-    client = Client(USERNAME_3, user_id)
+    user_id = random.randint(1, 99999)
+    username = random_str(8)
+    client = Client(username, user_id)
 
     client.send_message('/help')
     resp = responses_queue.get(timeout=10)
@@ -380,47 +368,47 @@ def test_choose_language_cmd(serv_starter):
 
 def test_create_team(serv_starter):
     create_team(
-        username=USERNAME_4,
-        user_id=USER_ID_4,
-        team_name="konoha"
+        username=random_str(8),
+        user_id=random.randint(1, 99999),
+        team_name=random_str(8)
     )
 
 
 def test_invite_to_team(serv_starter):
     invite_to_team(
-        username=USERNAME_6,
-        user_id=USER_ID_6,
-        team_name="river",
-        invited_username=USERNAME_7,
-        invited_user_id=USER_ID_7
+        username=random_str(8),
+        user_id=random.randint(1, 99999),
+        team_name=random_str(8),
+        invited_username=random_str(8),
+        invited_user_id=random.randint(1, 99999)
     )
 
 
 def test_accept_team_invite(serv_starter):
     accept_team_invite(
-        username=USERNAME_8,
-        user_id=USER_ID_8,
-        team_name="koshka",
-        invited_username=USERNAME_9,
-        invited_user_id=USER_ID_9
+        username=random_str(8),
+        user_id=random.randint(1, 99999),
+        team_name=random_str(8),
+        invited_username=random_str(8),
+        invited_user_id=random.randint(1, 99999)
     )
 
 
 def test_reject_team_invite(serv_starter):
     reject_team_invite(
-        username=USERNAME_10,
-        user_id=USER_ID_10,
+        username=random_str(8),
+        user_id=random.randint(1, 99999),
         team_name="hikari",
-        invited_username=USERNAME_11,
-        invited_user_id=USER_ID_11
+        invited_username=random_str(8),
+        invited_user_id=random.randint(1, 99999)
     )
 
 
 def test_create_meeting(serv_starter):
     create_meeting(
-        username=USERNAME_5,
-        user_id=USER_ID_5,
-        team_name="garden",
-        meeting_desc="breakfast",
+        username=random_str(8),
+        user_id=random.randint(1, 99999),
+        team_name=random_str(8),
+        meeting_desc=random_str(8),
         meeting_time_str="11-11-2022 11:11"
     )

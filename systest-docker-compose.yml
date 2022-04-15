@@ -34,6 +34,7 @@ services:
       - 50053:50053
 
   backend-service-1:
+    container_name: backend-service-1
     networks:
       - internal-net
     build:
@@ -47,6 +48,7 @@ services:
       - calendar-service
 
   backend-service-2:
+    container_name: backend-service-2
     networks:
       - internal-net
     build:
