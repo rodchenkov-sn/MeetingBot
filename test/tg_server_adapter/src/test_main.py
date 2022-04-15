@@ -78,8 +78,25 @@ def test_choose_language_cmd(serv_starter):
     resp = responses_queue.get(timeout=10)
     assert resp.user_id == user_id
     assert resp.text == "Язык сменен"
-
-    client.send_message('/help')
     resp = responses_queue.get(timeout=10)
     assert resp.user_id == user_id
     assert resp.text == LINE_HELP_RU
+
+
+def test_create_team(serv_starter):
+    user_id = 6969
+    team_name = "konoha"
+    client = Client('Sakura', user_id)
+
+    client.send_message('/create_team')
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == user_id
+    assert resp.text == "Enter name:"
+
+    client.send_message(team_name)
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == user_id
+    assert resp.text == f"{team_name} team created!"
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == user_id
+    assert resp.text == LINE_HELP_EN
