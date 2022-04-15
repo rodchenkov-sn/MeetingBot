@@ -1,8 +1,11 @@
 import pytest
 
+import string
+import random
+
 import re
 
-from server import start_server, stop_server, Client, responses_queue
+from server import start_server, stop_server, Client, responses_queue, messages_queue
 
 LINE_HELP_EN = f"/create_team - to add team\n" \
     f"/invite_member - to invite user\n" \
@@ -58,6 +61,65 @@ USERNAME_10 = "Koya"
 USERNAME_11 = "Annie"
 
 
+def stress():
+    client = Client('bruh', 100)
+    for _ in range(1000):
+        client.send_message('/get_agenda_today')
+    messages_queue.join()
+
+
+@pytest.fixture(scope='session', autouse=True)
+def serv_starter():
+    start_server()
+    yield True
+    stress()
+    stop_server()
+
+
+def test_help_cmd(serv_starter):
+    user_id = USER_ID_1
+    client = Client(USERNAME_1, user_id)
+
+    client.send_message('/help')
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == user_id
+    assert resp.text == LINE_HELP_EN
+
+
+def test_start_cmd(serv_starter):
+    user_id = USER_ID_2
+    client = Client(USERNAME_2, user_id)
+
+    client.send_message('/start')
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == user_id
+    assert resp.text == LINE_HELP_EN
+
+
+def test_choose_language_cmd(serv_starter):
+    user_id = USER_ID_3
+    client = Client(USERNAME_3, user_id)
+
+    client.send_message('/help')
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == user_id
+    assert resp.text == LINE_HELP_EN
+
+    client.send_message('/change_language')
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == user_id
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == user_id
+
+    client.send_message('/change_language__ru')
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == user_id
+    assert resp.text == "Язык сменен"
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == user_id
+    assert resp.text == LINE_HELP_RU
+
+
 def create_team(
     username,
     user_id,
@@ -77,6 +139,52 @@ def create_team(
     resp = responses_queue.get(timeout=10)
     assert resp.user_id == user_id
     assert resp.text == LINE_HELP_EN
+
+
+def random_str(n):
+    return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(n))
+
+
+def test_stability_create(serv_starter):
+    client = Client('bbb', 1703)
+
+    for x in range(1, 100):
+        client.send_message('/create_team')
+        responses_queue.get(timeout=10)
+        team_name = random_str(10)
+        client.send_message(team_name)
+        resp = responses_queue.get(timeout=10)
+        assert resp.text == f"{team_name} team created!"
+        responses_queue.get(timeout=10)
+
+
+def test_escaped_name(serv_starter):
+    client = Client('bbb', 1703)
+    client.send_message('/create_team')
+    responses_queue.get(timeout=10)
+    team_name = "\n"
+    client.send_message(team_name)
+    resp = responses_queue.get(timeout=10)
+    assert resp.text == f"{team_name} team created!"
+    responses_queue.get(timeout=10)
+
+
+def test_auth_gcal(serv_starter):
+    client = Client('e', 1212)
+    client.send_message('/auth_gcal')
+    responses_queue.get(timeout=10)
+    client.send_message('123')
+    res = responses_queue.get(timeout=10)
+    assert res.text == 'Authenticated!'
+
+    
+def test_create_team(serv_starter):
+    create_team(
+        username=USERNAME_4,
+        user_id=USER_ID_4,
+        team_name="konoha"
+    )
+
 
 
 def invite_to_team(
