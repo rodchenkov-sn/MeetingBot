@@ -15,7 +15,7 @@ jobs:
     needs: [setup]
     steps:
       - name: Show test results
-        run: docker compose -f systest-docker-compose.yml logs tg-test-service
+        run: docker compose -f systest-docker-compose.yml logs -f tg-test-service
       - name: Propagate test result
         run: docker wait tg-test-service
       - name: Check load balancing
