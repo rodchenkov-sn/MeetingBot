@@ -42,7 +42,7 @@ def serv_starter():
 
 
 def test_help_cmd(serv_starter):
-    user_id = 1488
+    user_id = 1
     client = Client('Ayanami', user_id)
 
     client.send_message('/help')
@@ -52,7 +52,7 @@ def test_help_cmd(serv_starter):
 
 
 def test_start_cmd(serv_starter):
-    user_id = 1523
+    user_id = 2
     client = Client('Rudy', user_id)
 
     client.send_message('/start')
@@ -62,7 +62,7 @@ def test_start_cmd(serv_starter):
 
 
 def test_choose_language_cmd(serv_starter):
-    user_id = 9999
+    user_id = 3
     client = Client('Asuna', user_id)
 
     client.send_message('/help')
@@ -86,10 +86,11 @@ def test_choose_language_cmd(serv_starter):
 
 
 def create_team(
+    username,
     user_id,
     team_name
 ):
-    client = Client('Sakura', user_id)
+    client = Client(username, user_id)
 
     client.send_message('/create_team')
     resp = responses_queue.get(timeout=10)
@@ -107,12 +108,14 @@ def create_team(
 
 def test_create_team(serv_starter):
     create_team(
-        user_id=6969,
+        username="Sakura",
+        user_id=4,
         team_name="konoha"
     )
 
 
 def create_meeting(
+    username,
     user_id,
     team_name,
     meeting_desc,
@@ -120,9 +123,13 @@ def create_meeting(
 ):
     pattern_team_id = re.compile(rf"/create_meeting[0-9]+ -- {team_name}\n")
 
-    create_team(user_id, team_name)
+    create_team(
+        username,
+        user_id,
+        team_name
+    )
 
-    client = Client('Rosy', user_id)
+    client = Client(username, user_id)
 
     client.send_message('/create_meeting')
     resp = responses_queue.get(timeout=10)
@@ -151,7 +158,8 @@ def create_meeting(
 
 def test_create_meeting(serv_starter):
     create_meeting(
-        user_id=7777,
+        username="Rosy",
+        user_id=5,
         team_name="garden",
         meeting_desc="breakfast",
         meeting_time_str="11-11-2022 11:11"
