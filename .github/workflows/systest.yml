@@ -1,0 +1,31 @@
+name: systest-workflow
+on: workflow_dispatch
+jobs:
+  setup:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v2
+      - name: Compile protobufs
+        run: sh protobufs/compile.sh
+      - name: Build test env
+        run: docker compose -f systest-docker-compose.yml up -d
+    
+  test:
+    runs-on: self-hosted
+    needs: [setup]
+    steps:
+      - name: Show test results
+        run: docker compose -f systest-docker-compose.yml logs tg-test-service
+      - name: Propagate test result
+        run: docker wait tg-test-service
+  
+  cleanup:
+    runs-on: self-hosted
+    needs: [test]
+    if: always()
+    steps:
+      - name: Shutdown
+        run: docker compose -f systest-docker-compose.yml down
+      - name: Cleanup
+        run: docker image prune -a -f
+  
