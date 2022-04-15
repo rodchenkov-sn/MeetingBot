@@ -42,6 +42,8 @@ USER_ID_6 = 6
 USER_ID_7 = 7
 USER_ID_8 = 8
 USER_ID_9 = 9
+USER_ID_10 = 10
+USER_ID_11 = 11
 
 USERNAME_1 = "Ayanami"
 USERNAME_2 = "Rudy"
@@ -52,6 +54,8 @@ USERNAME_6 = "Cinderella"
 USERNAME_7 = "Katya"
 USERNAME_8 = "Nastya"
 USERNAME_9 = "Miya"
+USERNAME_10 = "Koya"
+USERNAME_11 = "Annie"
 
 
 def create_team(
@@ -145,6 +149,32 @@ def accept_team_invite(
     resp = responses_queue.get(timeout=10)
     assert resp.user_id == user_id
     assert resp.text == f"@{invited_username} accepted your invitation"
+
+
+def reject_team_invite(
+    username,
+    user_id,
+    team_name,
+    invited_username,
+    invited_user_id
+):
+    team_id = invite_to_team(
+        username,
+        user_id,
+        team_name,
+        invited_username,
+        invited_user_id
+    )
+
+    invited_client = Client(invited_username, invited_user_id)
+
+    invited_client.send_message(f"/reject_invite{team_id}")
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == invited_user_id
+    assert resp.text == "Rejected!"
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == user_id
+    assert resp.text == f"@{invited_username} rejected your invitation"
 
 
 def create_meeting(
@@ -265,6 +295,16 @@ def test_accept_team_invite(serv_starter):
         team_name="koshka",
         invited_username=USERNAME_9,
         invited_user_id=USER_ID_9
+    )
+
+
+def test_reject_team_invite(serv_starter):
+    reject_team_invite(
+        username=USERNAME_10,
+        user_id=USER_ID_10,
+        team_name="hikari",
+        invited_username=USERNAME_11,
+        invited_user_id=USER_ID_11
     )
 
 
