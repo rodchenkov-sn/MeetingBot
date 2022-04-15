@@ -5,7 +5,7 @@ import random
 
 import re
 
-from server import start_server, stop_server, Client, responses_queue
+from server import start_server, stop_server, Client, responses_queue, messages_queue
 
 LINE_HELP_EN = f"/create_team - to add team\n" \
     f"/invite_member - to invite user\n" \
@@ -53,10 +53,18 @@ USERNAME_6 = "Cinderella"
 USERNAME_7 = "Katya"
 
 
+def stress():
+    client = Client('bruh', 100)
+    for _ in range(1000):
+        client.send_message('/get_agenda_today')
+    messages_queue.join()
+
+
 @pytest.fixture(scope='session', autouse=True)
 def serv_starter():
     start_server()
     yield True
+    stress()
     stop_server()
 
 

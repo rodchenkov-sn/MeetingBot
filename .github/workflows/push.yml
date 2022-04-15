@@ -1,4 +1,4 @@
-name: on-push-integration-tests-workflow
+name: Integration testing
 on: push
 jobs:
   setup:
