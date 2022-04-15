@@ -1,5 +1,8 @@
 import pytest
 
+import string
+import random
+
 import re
 
 from server import start_server, stop_server, Client, responses_queue
@@ -102,6 +105,32 @@ def test_create_team(serv_starter):
     resp = responses_queue.get(timeout=10)
     assert resp.user_id == user_id
     assert resp.text == LINE_HELP_EN
+
+
+def random_str():
+    return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
+
+
+def test_stability_create(serv_starter):
+    client = Client('bbb', 1703)
+
+    for x in range(1, 100):
+        client.send_message('/create_team')
+        responses_queue.get(timeout=10)
+        team_name = random_str()
+        client.send_message(team_name)
+        resp = responses_queue.get(timeout=10)
+        assert resp.text == f"{team_name} team created!"
+        responses_queue.get(timeout=10)
+
+
+def test_auth_gcal(serv_starter):
+    client = Client('e', 1212)
+    client.send_message('/auth_gcal')
+    responses_queue.get(timeout=10)
+    client.send_message('123')
+    res = responses_queue.get(timeout=10)
+    assert res.text == 'Authenticated!'
 
 
 def test_create_meeting(serv_starter):
