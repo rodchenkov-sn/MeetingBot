@@ -5,7 +5,11 @@ import random
 
 import re
 
+from typing import Tuple
+
 from server import start_server, stop_server, Client, responses_queue, messages_queue
+from server import Response
+
 
 LINE_HELP_EN = f"/create_team - to add team\n" \
     f"/invite_member - to invite user\n" \
@@ -35,6 +39,10 @@ LINE_HELP_RU = f"/create_team - чтобы добавить команду\n" \
     f"/auth_gcal - чтобы авторизоваться используя гугл календарь\n" \
     f"/change_language - чтобы сменить язык\n" \
     f"\n/help - чтобы увидеть это сообщение"
+
+MORE_THAN_ONE_USER_MENTIONED_RESP = 'mention only one user pls'
+INVALID_USER_MENTIONED_RESP = 'mention only one user pls'
+SOMETHING_WENT_WRONG_RESP = 'something went wront'
 
 
 def random_str(n):
@@ -103,25 +111,55 @@ def test_choose_language_cmd(serv_starter):
     assert resp.text == LINE_HELP_RU
 
 
+def create_team_for_client(client: Client, team_name: str):
+    client.send_message('/create_team')
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == client.id
+    assert resp.text == "Enter name:"
+
+    client.send_message(team_name)
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == client.id
+    assert resp.text == f"{team_name} team created!"
+    resp = responses_queue.get(timeout=10)
+    assert resp.user_id == client.id
+    assert resp.text == LINE_HELP_EN
+
+
 def create_team(
     username,
     user_id,
     team_name
 ):
     client = Client(username, user_id)
+    create_team_for_client(client, team_name)
+    
 
-    client.send_message('/create_team')
-    resp = responses_queue.get(timeout=10)
-    assert resp.user_id == user_id
-    assert resp.text == "Enter name:"
-
-    client.send_message(team_name)
-    resp = responses_queue.get(timeout=10)
-    assert resp.user_id == user_id
-    assert resp.text == f"{team_name} team created!"
-    resp = responses_queue.get(timeout=10)
-    assert resp.user_id == user_id
-    assert resp.text == LINE_HELP_EN
+def send_child_invitation(parent_owner: Client, child_owner: Client) -> Tuple[str, str]:
+    parent_owner.send_message('/add_child_team')
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == parent_owner.id
+    parent_team_id = resp.text
+    parent_team_id = re.sub("/add_child_team", "", parent_team_id)
+    parent_team_id = re.sub(r" -- .*\n", "", parent_team_id)
+    parent_owner.send_message(f'/add_child_team{parent_team_id}')
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == parent_owner.id
+    parent_owner.send_message(f'@{child_owner.username}')
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == parent_owner.id
+    child_team_id = resp.text
+    child_team_id = re.sub("/add_child_team", "", child_team_id)
+    child_team_id = re.sub(r" -- .*\n", "", child_team_id)
+    parent_owner.send_message(f'/add_child_team{child_team_id}')
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == parent_owner.id
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == parent_owner.id
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == child_owner.id
+    assert resp.text.startswith(f'@{parent_owner.username}')
+    return parent_team_id, child_team_id
 
 
 def test_stability_create(serv_starter):
@@ -412,3 +450,108 @@ def test_create_meeting(serv_starter):
         meeting_desc=random_str(8),
         meeting_time_str="11-11-2022 11:11"
     )
+
+
+def test_create_child_team_accept(serv_starter):
+    parent_owner = Client(random_str(8), random.randint(1, 99999))
+    child_owner = Client(random_str(8), random.randint(1, 99999))
+    parent_team_name = random_str(8)
+    child_team_name = random_str(8)
+    create_team_for_client(parent_owner, parent_team_name)
+    create_team_for_client(child_owner, child_team_name)
+    
+    parent_team_id, child_team_id = send_child_invitation(parent_owner, child_owner)
+
+    child_owner.send_message(f'/acc_child{child_team_id}_{parent_team_id}')
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == child_owner.id
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == parent_owner.id
+    assert resp.text == f'@{child_owner.username} team is now your child'
+
+
+def test_create_child_team_reject(serv_starter):
+    parent_owner = Client(random_str(8), random.randint(1, 99999))
+    child_owner = Client(random_str(8), random.randint(1, 99999))
+    parent_team_name = random_str(8)
+    child_team_name = random_str(8)
+    create_team_for_client(parent_owner, parent_team_name)
+    create_team_for_client(child_owner, child_team_name)
+    
+    parent_team_id, child_team_id = send_child_invitation(parent_owner, child_owner)
+
+    child_owner.send_message(f'/rej_child{child_team_id}_{parent_team_id}')
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == child_owner.id
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == parent_owner.id
+    assert resp.text == f'@{child_owner.username} rejected child invitation'
+
+
+def test_create_child_team_multiple_invitations(serv_starter):
+    parent_owner = Client(random_str(8), random.randint(1, 99999))
+    child1_owner = Client(random_str(8), random.randint(1, 99999))
+    child2_owner = Client(random_str(8), random.randint(1, 99999))
+    parent_team_name = random_str(8)
+    child1_team_name = random_str(8)
+    child2_team_name = random_str(8)
+    create_team_for_client(parent_owner, parent_team_name)
+    create_team_for_client(child1_owner, child1_team_name)
+    create_team_for_client(child2_owner, child2_team_name)
+    parent_owner.send_message('/add_child_team')
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == parent_owner.id
+    parent_team_id = resp.text
+    parent_team_id = re.sub("/add_child_team", "", parent_team_id)
+    parent_team_id = re.sub(r" -- .*\n", "", parent_team_id)
+    parent_owner.send_message(f'/add_child_team{parent_team_id}')
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == parent_owner.id
+    parent_owner.send_message(f'@{child1_owner.username} @{child2_owner.username}')
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == parent_owner.id
+    assert resp.text == MORE_THAN_ONE_USER_MENTIONED_RESP
+
+
+def test_create_child_team_invalid_mention(serv_starter):
+    parent_owner = Client(random_str(8), random.randint(1, 99999))
+    parent_team_name = random_str(8)
+    create_team_for_client(parent_owner, parent_team_name)
+    parent_owner.send_message('/add_child_team')
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == parent_owner.id
+    parent_team_id = resp.text
+    parent_team_id = re.sub("/add_child_team", "", parent_team_id)
+    parent_team_id = re.sub(r" -- .*\n", "", parent_team_id)
+    parent_owner.send_message(f'/add_child_team{parent_team_id}')
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == parent_owner.id
+    parent_owner.send_message(f'@{random_str(8)}')
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == parent_owner.id
+    assert resp.text == INVALID_USER_MENTIONED_RESP
+
+
+def test_create_child_team_invalid_cmd(serv_starter):
+    parent_owner = Client(random_str(8), random.randint(1, 99999))
+    child_owner = Client(random_str(8), random.randint(1, 99999))
+    parent_team_name = random_str(8)
+    child_team_name = random_str(8)
+    create_team_for_client(parent_owner, parent_team_name)
+    create_team_for_client(child_owner, child_team_name)
+    parent_owner.send_message('/add_child_team')
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == parent_owner.id
+    parent_team_id = resp.text
+    parent_team_id = re.sub("/add_child_team", "", parent_team_id)
+    parent_team_id = re.sub(r" -- .*\n", "", parent_team_id)
+    parent_owner.send_message(f'/add_child_team{parent_team_id}')
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == parent_owner.id
+    parent_owner.send_message(f'@{child_owner.username}')
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == parent_owner.id
+    parent_owner.send_message(f'/invalid_cmd')
+    resp: Response = responses_queue.get(timeout=10)
+    assert resp.user_id == parent_owner.id
+    assert resp.text == SOMETHING_WENT_WRONG_RESP

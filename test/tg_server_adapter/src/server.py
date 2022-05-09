@@ -84,8 +84,8 @@ def stop_server():
 
 class Client:
     def __init__(self, username: str, id: int):
-        self.__username = username
-        self.__id = id
+        self.username = username
+        self.id = id
         self.send_message("/start")
         responses_queue.get(timeout=10)
 
@@ -94,14 +94,14 @@ class Client:
             'message_id': randint(1, 999999),
             'date': 1,
             'chat': {
-                'id': self.__id,
+                'id': self.id,
                 'type': 'private'
             },
             'from': {
-                'username': self.__username,
+                'username': self.username,
                 'is_bot': False,
                 'first_name': 'Rei',
-                'id': self.__id
+                'id': self.id
             },
             'text': message
         })
