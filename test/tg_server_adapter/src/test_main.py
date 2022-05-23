@@ -139,6 +139,18 @@ def test_stability_create(serv_starter):
         responses_queue.get(timeout=10)
 
 
+def test_stability_meeting(serv_starter):
+    for x in range(1, 10):
+        t = create_meeting(
+            username=random_str(8),
+            user_id=random.randint(1, 99999),
+            team_name=random_str(8),
+            meeting_desc=random_str(8),
+            meeting_time_str="11-11-2022 11:11"
+        )
+        assert t
+
+
 def test_escaped_name(serv_starter):
     user_id = random.randint(1, 99999)
     username = random_str(8)
@@ -310,6 +322,8 @@ def create_meeting(
     resp = responses_queue.get(timeout=10)
     assert resp.user_id == user_id
     assert resp.text == "Meeting created!"
+
+    return True
 
 
 @pytest.fixture(scope='session', autouse=True)
